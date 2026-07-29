@@ -1,0 +1,23 @@
+#!/bin/sh
+# Husky commit-msg hook
+
+if command -v npx >/dev/null 2>&1; then
+  if [ -d "frontend" ]; then
+    npx --prefix frontend commitlint --edit "$1"
+    exit $?
+  else
+    npx --no -- commitlint --edit "$1"
+    exit $?
+  fi
+fi
+
+# Fallback validation if npx is not available
+msg=$(head -n 1 "$1")
+pattern='^(feat|fix|chore|docs|refactor|test|style)(\([a-zA-Z0-9_-]+\))?!?: .+'
+
+if ! echo "$msg" | grep -qE "$pattern"; then
+  echo "❌ Error: Commit message does not follow the required convention."
+  echo "The type MUST strictly be one of: [feat, fix, chore, docs, refactor, test, style]"
+  echo "Example: feat: add user authentication"
+  exit 1
+fi
