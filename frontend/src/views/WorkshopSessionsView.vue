@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useConfirm } from 'primevue/useconfirm'
-import { useToast } from 'primevue/usetoast'
-import { useSessionsStore } from '@/stores/sessions'
-import { useWorkshopsStore } from '@/stores/workshops'
-import WorkshopContextHeader from '@/components/WorkshopContextHeader.vue'
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import { useSessionsStore } from "@/stores/sessions";
+import { useWorkshopsStore } from "@/stores/workshops";
+import WorkshopContextHeader from "@/components/WorkshopContextHeader.vue";
 import {
   emptySessionForm,
   formatSessionSchedule,
@@ -15,148 +15,154 @@ import {
   SESSION_STATUS_OPTIONS,
   type SessionFormData,
   type WorkshopSession,
-} from '@/types/session'
+} from "@/types/session";
 
-const route = useRoute()
-const router = useRouter()
-const toast = useToast()
-const confirm = useConfirm()
-const sessionsStore = useSessionsStore()
-const workshopsStore = useWorkshopsStore()
+const route = useRoute();
+const router = useRouter();
+const toast = useToast();
+const confirm = useConfirm();
+const sessionsStore = useSessionsStore();
+const workshopsStore = useWorkshopsStore();
 
-const workshopId = computed(() => Number(route.params.id))
-const workshop = computed(() => workshopsStore.getById(workshopId.value))
+const workshopId = computed(() => Number(route.params.id));
+const workshop = computed(() => workshopsStore.getById(workshopId.value));
 
-const selectedSession = ref<WorkshopSession | null>(null)
-const isCreateMode = ref(false)
-const form = ref<SessionFormData>(emptySessionForm())
-const submitted = ref(false)
+const selectedSession = ref<WorkshopSession | null>(null);
+const isCreateMode = ref(false);
+const form = ref<SessionFormData>(emptySessionForm());
+const submitted = ref(false);
 
-const workshopSessions = computed(() => sessionsStore.getByWorkshopId(workshopId.value))
+const workshopSessions = computed(() =>
+  sessionsStore.getByWorkshopId(workshopId.value),
+);
 
 const formTitle = computed(() => {
-  if (isCreateMode.value) return 'Nueva sesión'
-  if (selectedSession.value) return 'Editar sesión'
-  return 'Detalle de sesión'
-})
+  if (isCreateMode.value) return "Nueva sesión";
+  if (selectedSession.value) return "Editar sesión";
+  return "Detalle de sesión";
+});
 
 const isFormValid = computed(() => {
-  if (!form.value.startsAt || !form.value.endsAt) return false
-  if (form.value.capacity <= 0) return false
-  return form.value.endsAt.getTime() > form.value.startsAt.getTime()
-})
+  if (!form.value.startsAt || !form.value.endsAt) return false;
+  if (form.value.capacity <= 0) return false;
+  return form.value.endsAt.getTime() > form.value.startsAt.getTime();
+});
 
 watch(
   workshopId,
   () => {
-    selectedSession.value = null
-    isCreateMode.value = false
-    form.value = emptySessionForm()
-    submitted.value = false
+    selectedSession.value = null;
+    isCreateMode.value = false;
+    form.value = emptySessionForm();
+    submitted.value = false;
   },
   { immediate: true },
-)
+);
 
 watch(
   workshop,
   (value) => {
     if (!value && workshopId.value) {
-      router.replace({ name: 'workshops' })
+      router.replace({ name: "workshops" });
     }
   },
   { immediate: true },
-)
+);
 
 const selectSession = (session: WorkshopSession) => {
-  selectedSession.value = session
-  isCreateMode.value = false
-  submitted.value = false
+  selectedSession.value = session;
+  isCreateMode.value = false;
+  submitted.value = false;
   form.value = {
     startsAt: new Date(session.startsAt),
     endsAt: new Date(session.endsAt),
     capacity: session.capacity,
     status: session.status,
-  }
-}
+  };
+};
 
 const openCreateForm = () => {
-  selectedSession.value = null
-  isCreateMode.value = true
-  submitted.value = false
-  form.value = emptySessionForm()
-}
+  selectedSession.value = null;
+  isCreateMode.value = true;
+  submitted.value = false;
+  form.value = emptySessionForm();
+};
 
 const resetForm = () => {
-  selectedSession.value = null
-  isCreateMode.value = false
-  submitted.value = false
-  form.value = emptySessionForm()
-}
+  selectedSession.value = null;
+  isCreateMode.value = false;
+  submitted.value = false;
+  form.value = emptySessionForm();
+};
 
 const saveSession = () => {
-  submitted.value = true
-  if (!isFormValid.value) return
+  submitted.value = true;
+  if (!isFormValid.value) return;
 
   if (isCreateMode.value) {
-    const created = sessionsStore.create(workshopId.value, form.value)
-    if (!created) return
+    const created = sessionsStore.create(workshopId.value, form.value);
+    if (!created) return;
 
     toast.add({
-      severity: 'success',
-      summary: 'Sesión creada',
-      detail: 'La sesión se agregó correctamente.',
+      severity: "success",
+      summary: "Sesión creada",
+      detail: "La sesión se agregó correctamente.",
       life: 3000,
-    })
-    selectSession(created)
-    isCreateMode.value = false
-    return
+    });
+    selectSession(created);
+    isCreateMode.value = false;
+    return;
   }
 
-  if (!selectedSession.value) return
+  if (!selectedSession.value) return;
 
-  const updated = sessionsStore.update(selectedSession.value.id, form.value)
-  if (!updated) return
+  const updated = sessionsStore.update(selectedSession.value.id, form.value);
+  if (!updated) return;
 
   toast.add({
-    severity: 'success',
-    summary: 'Sesión actualizada',
-    detail: 'Los cambios se guardaron correctamente.',
+    severity: "success",
+    summary: "Sesión actualizada",
+    detail: "Los cambios se guardaron correctamente.",
     life: 3000,
-  })
-  selectSession(updated)
-}
+  });
+  selectSession(updated);
+};
 
 const deleteSession = () => {
-  if (!selectedSession.value) return
+  if (!selectedSession.value) return;
 
   confirm.require({
-    message: '¿Deseas eliminar esta sesión? Esta acción no se puede deshacer.',
-    header: 'Eliminar sesión',
-    icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Eliminar',
-    rejectLabel: 'Cancelar',
-    acceptClass: 'p-button-danger',
+    message: "¿Deseas eliminar esta sesión? Esta acción no se puede deshacer.",
+    header: "Eliminar sesión",
+    icon: "pi pi-exclamation-triangle",
+    acceptLabel: "Eliminar",
+    rejectLabel: "Cancelar",
+    acceptClass: "p-button-danger",
     accept: () => {
-      const deleted = sessionsStore.remove(selectedSession.value!.id)
-      if (!deleted) return
+      const deleted = sessionsStore.remove(selectedSession.value!.id);
+      if (!deleted) return;
 
       toast.add({
-        severity: 'info',
-        summary: 'Sesión eliminada',
-        detail: 'La sesión fue eliminada de la lista.',
+        severity: "info",
+        summary: "Sesión eliminada",
+        detail: "La sesión fue eliminada de la lista.",
         life: 3000,
-      })
-      resetForm()
+      });
+      resetForm();
     },
-  })
-}
+  });
+};
 </script>
 
 <template>
   <div v-if="workshop" class="sessions-container">
     <WorkshopContextHeader :workshop="workshop">
       <template #actions>
-        <Button label="Nueva sesión" icon="pi pi-plus" @click="openCreateForm" />
+        <Button
+          label="Nueva sesión"
+          icon="pi pi-plus"
+          @click="openCreateForm"
+        />
       </template>
     </WorkshopContextHeader>
 
@@ -264,7 +270,8 @@ const deleteSession = () => {
             </div>
 
             <small v-if="submitted && !isFormValid" class="error-text">
-              Completa fechas válidas y una capacidad mayor a cero. La hora de fin debe ser posterior al inicio.
+              Completa fechas válidas y una capacidad mayor a cero. La hora de
+              fin debe ser posterior al inicio.
             </small>
 
             <div class="form-actions">
@@ -275,7 +282,11 @@ const deleteSession = () => {
                 @click="saveSession"
               />
               <template v-else>
-                <Button label="Guardar cambios" icon="pi pi-check" @click="saveSession" />
+                <Button
+                  label="Guardar cambios"
+                  icon="pi pi-check"
+                  @click="saveSession"
+                />
                 <Button
                   label="Eliminar"
                   icon="pi pi-trash"
@@ -284,7 +295,12 @@ const deleteSession = () => {
                   @click="deleteSession"
                 />
               </template>
-              <Button label="Limpiar" variant="outlined" severity="secondary" @click="resetForm" />
+              <Button
+                label="Limpiar"
+                variant="outlined"
+                severity="secondary"
+                @click="resetForm"
+              />
             </div>
           </div>
         </template>

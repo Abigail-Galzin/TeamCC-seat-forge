@@ -1,95 +1,106 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useWorkshopsStore } from '@/stores/workshops'
-import { emptyWorkshopForm, type Workshop, type WorkshopFormData } from '@/types/workshop'
+import { ref, computed } from "vue";
+import { storeToRefs } from "pinia";
+import { useRouter } from "vue-router";
+import { useToast } from "primevue/usetoast";
+import { useWorkshopsStore } from "@/stores/workshops";
+import {
+  emptyWorkshopForm,
+  type Workshop,
+  type WorkshopFormData,
+} from "@/types/workshop";
 
-const toast = useToast()
-const router = useRouter()
-const workshopsStore = useWorkshopsStore()
-const { workshops } = storeToRefs(workshopsStore)
+const toast = useToast();
+const router = useRouter();
+const workshopsStore = useWorkshopsStore();
+const { workshops } = storeToRefs(workshopsStore);
 
-const dialogVisible = ref(false)
-const editingWorkshop = ref<Workshop | null>(null)
-const form = ref<WorkshopFormData>(emptyWorkshopForm())
-const submitted = ref(false)
+const dialogVisible = ref(false);
+const editingWorkshop = ref<Workshop | null>(null);
+const form = ref<WorkshopFormData>(emptyWorkshopForm());
+const submitted = ref(false);
 
-const topicOptions = ['Frontend', 'Backend', 'Quality', 'UI/UX', 'DevOps', 'General']
+const topicOptions = [
+  "Frontend",
+  "Backend",
+  "Quality",
+  "UI/UX",
+  "DevOps",
+  "General",
+];
 
 const dialogTitle = computed(() =>
-  editingWorkshop.value ? 'Editar Workshop' : 'Nuevo Workshop',
-)
+  editingWorkshop.value ? "Editar Workshop" : "Nuevo Workshop",
+);
 
 const openCreateDialog = () => {
-  editingWorkshop.value = null
-  form.value = emptyWorkshopForm()
-  submitted.value = false
-  dialogVisible.value = true
-}
+  editingWorkshop.value = null;
+  form.value = emptyWorkshopForm();
+  submitted.value = false;
+  dialogVisible.value = true;
+};
 
 const openEditDialog = (workshop: Workshop) => {
-  editingWorkshop.value = workshop
+  editingWorkshop.value = workshop;
   form.value = {
     title: workshop.title,
     description: workshop.description,
     topic: workshop.topic,
     active: workshop.active,
-  }
-  submitted.value = false
-  dialogVisible.value = true
-}
+  };
+  submitted.value = false;
+  dialogVisible.value = true;
+};
 
 const closeDialog = () => {
-  dialogVisible.value = false
-  editingWorkshop.value = null
-  form.value = emptyWorkshopForm()
-  submitted.value = false
-}
+  dialogVisible.value = false;
+  editingWorkshop.value = null;
+  form.value = emptyWorkshopForm();
+  submitted.value = false;
+};
 
 const isFormValid = computed(
   () =>
     form.value.title.trim().length > 0 &&
     form.value.description.trim().length > 0 &&
     form.value.topic.trim().length > 0,
-)
+);
 
 const saveWorkshop = () => {
-  submitted.value = true
-  if (!isFormValid.value) return
+  submitted.value = true;
+  if (!isFormValid.value) return;
 
   const payload: WorkshopFormData = {
     title: form.value.title.trim(),
     description: form.value.description.trim(),
     topic: form.value.topic.trim(),
     active: form.value.active,
-  }
+  };
 
   if (editingWorkshop.value) {
-    workshopsStore.update(editingWorkshop.value.id, payload)
+    workshopsStore.update(editingWorkshop.value.id, payload);
     toast.add({
-      severity: 'success',
-      summary: 'Workshop actualizado',
+      severity: "success",
+      summary: "Workshop actualizado",
       detail: `"${payload.title}" se guardó correctamente.`,
       life: 3000,
-    })
+    });
   } else {
-    workshopsStore.create(payload)
+    workshopsStore.create(payload);
     toast.add({
-      severity: 'success',
-      summary: 'Workshop creado',
+      severity: "success",
+      summary: "Workshop creado",
       detail: `"${payload.title}" se agregó a la lista.`,
       life: 3000,
-    })
+    });
   }
 
-  closeDialog()
-}
+  closeDialog();
+};
 
 const openSessions = (workshop: Workshop) => {
-  router.push({ name: 'workshop-sessions', params: { id: workshop.id } })
-}
+  router.push({ name: "workshop-sessions", params: { id: workshop.id } });
+};
 </script>
 
 <template>
@@ -97,9 +108,15 @@ const openSessions = (workshop: Workshop) => {
     <header class="page-header">
       <div>
         <h1>Workshops</h1>
-        <p class="subtitle">Administra los workshops disponibles con datos de ejemplo.</p>
+        <p class="subtitle">
+          Administra los workshops disponibles con datos de ejemplo.
+        </p>
       </div>
-      <Button label="Nuevo Workshop" icon="pi pi-plus" @click="openCreateDialog" />
+      <Button
+        label="Nuevo Workshop"
+        icon="pi pi-plus"
+        @click="openCreateDialog"
+      />
     </header>
 
     <Card>
@@ -200,7 +217,10 @@ const openSessions = (workshop: Workshop) => {
             class="w-full"
             :invalid="submitted && !form.description.trim()"
           />
-          <small v-if="submitted && !form.description.trim()" class="error-text">
+          <small
+            v-if="submitted && !form.description.trim()"
+            class="error-text"
+          >
             La descripción es obligatoria.
           </small>
         </div>
@@ -212,7 +232,12 @@ const openSessions = (workshop: Workshop) => {
       </div>
 
       <template #footer>
-        <Button label="Cancelar" variant="outlined" severity="secondary" @click="closeDialog" />
+        <Button
+          label="Cancelar"
+          variant="outlined"
+          severity="secondary"
+          @click="closeDialog"
+        />
         <Button label="Guardar" icon="pi pi-check" @click="saveWorkshop" />
       </template>
     </Dialog>

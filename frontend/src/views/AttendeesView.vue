@@ -1,103 +1,103 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useToast } from 'primevue/usetoast'
-import { useAttendeesStore } from '@/stores/attendees'
-import { useWorkshopsStore } from '@/stores/workshops'
+import { computed, ref } from "vue";
+import { storeToRefs } from "pinia";
+import { useToast } from "primevue/usetoast";
+import { useAttendeesStore } from "@/stores/attendees";
+import { useWorkshopsStore } from "@/stores/workshops";
 import {
   emptyAttendeeForm,
   isValidEmail,
   type Attendee,
   type AttendeeFormData,
-} from '@/types/attendee'
+} from "@/types/attendee";
 
-const toast = useToast()
-const attendeesStore = useAttendeesStore()
-const workshopsStore = useWorkshopsStore()
-const { attendees } = storeToRefs(attendeesStore)
-const { workshops } = storeToRefs(workshopsStore)
+const toast = useToast();
+const attendeesStore = useAttendeesStore();
+const workshopsStore = useWorkshopsStore();
+const { attendees } = storeToRefs(attendeesStore);
+const { workshops } = storeToRefs(workshopsStore);
 
-const dialogVisible = ref(false)
-const editingAttendee = ref<Attendee | null>(null)
-const form = ref<AttendeeFormData>(emptyAttendeeForm())
-const submitted = ref(false)
+const dialogVisible = ref(false);
+const editingAttendee = ref<Attendee | null>(null);
+const form = ref<AttendeeFormData>(emptyAttendeeForm());
+const submitted = ref(false);
 
 const workshopOptions = computed(() =>
   workshops.value.map((workshop) => ({
     label: workshop.title,
     value: workshop.id,
   })),
-)
+);
 
 const dialogTitle = computed(() =>
-  editingAttendee.value ? 'Editar asistente' : 'Nuevo asistente',
-)
+  editingAttendee.value ? "Editar asistente" : "Nuevo asistente",
+);
 
 const isFormValid = computed(
   () =>
     form.value.name.trim().length > 0 &&
     isValidEmail(form.value.email) &&
     form.value.workshopId > 0,
-)
+);
 
 const getWorkshopTitle = (workshopId: number) =>
-  workshopsStore.getById(workshopId)?.title ?? '—'
+  workshopsStore.getById(workshopId)?.title ?? "—";
 
 const openCreateDialog = () => {
-  editingAttendee.value = null
-  form.value = emptyAttendeeForm()
-  submitted.value = false
-  dialogVisible.value = true
-}
+  editingAttendee.value = null;
+  form.value = emptyAttendeeForm();
+  submitted.value = false;
+  dialogVisible.value = true;
+};
 
 const openEditDialog = (attendee: Attendee) => {
-  editingAttendee.value = attendee
+  editingAttendee.value = attendee;
   form.value = {
     name: attendee.name,
     email: attendee.email,
     workshopId: attendee.workshopId,
-  }
-  submitted.value = false
-  dialogVisible.value = true
-}
+  };
+  submitted.value = false;
+  dialogVisible.value = true;
+};
 
 const closeDialog = () => {
-  dialogVisible.value = false
-  editingAttendee.value = null
-  form.value = emptyAttendeeForm()
-  submitted.value = false
-}
+  dialogVisible.value = false;
+  editingAttendee.value = null;
+  form.value = emptyAttendeeForm();
+  submitted.value = false;
+};
 
 const saveAttendee = () => {
-  submitted.value = true
-  if (!isFormValid.value) return
+  submitted.value = true;
+  if (!isFormValid.value) return;
 
   const payload: AttendeeFormData = {
     name: form.value.name.trim(),
     email: form.value.email.trim(),
     workshopId: form.value.workshopId,
-  }
+  };
 
   if (editingAttendee.value) {
-    attendeesStore.update(editingAttendee.value.id, payload)
+    attendeesStore.update(editingAttendee.value.id, payload);
     toast.add({
-      severity: 'success',
-      summary: 'Asistente actualizado',
+      severity: "success",
+      summary: "Asistente actualizado",
       detail: `"${payload.name}" se guardó correctamente.`,
       life: 3000,
-    })
+    });
   } else {
-    attendeesStore.create(payload)
+    attendeesStore.create(payload);
     toast.add({
-      severity: 'success',
-      summary: 'Asistente creado',
+      severity: "success",
+      summary: "Asistente creado",
       detail: `"${payload.name}" se agregó a la lista.`,
       life: 3000,
-    })
+    });
   }
 
-  closeDialog()
-}
+  closeDialog();
+};
 </script>
 
 <template>
@@ -105,9 +105,15 @@ const saveAttendee = () => {
     <header class="page-header">
       <div>
         <h1>Asistentes</h1>
-        <p class="subtitle">Administra los asistentes registrados en los workshops.</p>
+        <p class="subtitle">
+          Administra los asistentes registrados en los workshops.
+        </p>
       </div>
-      <Button label="Nuevo asistente" icon="pi pi-plus" @click="openCreateDialog" />
+      <Button
+        label="Nuevo asistente"
+        icon="pi pi-plus"
+        @click="openCreateDialog"
+      />
     </header>
 
     <Card>
@@ -191,14 +197,22 @@ const saveAttendee = () => {
             class="w-full"
             :invalid="submitted && !isValidEmail(form.email)"
           />
-          <small v-if="submitted && !isValidEmail(form.email)" class="error-text">
+          <small
+            v-if="submitted && !isValidEmail(form.email)"
+            class="error-text"
+          >
             Ingresa un email válido.
           </small>
         </div>
       </div>
 
       <template #footer>
-        <Button label="Cancelar" variant="outlined" severity="secondary" @click="closeDialog" />
+        <Button
+          label="Cancelar"
+          variant="outlined"
+          severity="secondary"
+          @click="closeDialog"
+        />
         <Button label="Guardar" icon="pi pi-check" @click="saveAttendee" />
       </template>
     </Dialog>
