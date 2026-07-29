@@ -13,6 +13,21 @@ const router = createRouter({
       name: 'components-guide',
       component: () => import('../components/ComponentsGuideView.vue'),
     },
+    {
+      path: '/workshops',
+      name: 'workshops',
+      component: () => import('../views/WorkshopsView.vue'),
+    },
+    {
+      path: '/workshops/:id/sessions',
+      name: 'workshop-sessions',
+      component: () => import('../views/WorkshopSessionsView.vue'),
+    },
+    {
+      path: '/attendees',
+      name: 'attendees',
+      component: () => import('../views/AttendeesView.vue'),
+    },
   ],
 })
 

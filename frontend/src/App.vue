@@ -20,6 +20,16 @@ const items = ref([
     label: 'Catálogo de Componentes',
     icon: 'pi pi-th-large',
     command: () => router.push('/components')
+  },
+  {
+    label: 'Workshops',
+    icon: 'pi pi-book',
+    command: () => router.push('/workshops')
+  },
+  {
+    label: 'Asistentes',
+    icon: 'pi pi-users',
+    command: () => router.push('/attendees')
   }
 ])
 </script>
