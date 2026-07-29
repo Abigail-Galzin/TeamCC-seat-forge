@@ -26,7 +26,7 @@ default: &default
 
 development:
   <<: *default
-  database: backend_development
+  database: seat_force_development
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.
@@ -60,7 +60,7 @@ development:
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: backend_test
+  database: seat_force_test
   host: <%= ENV['DATABASE_TEST_HOST'] || 'localhost' %>
   port: <%= ENV['DATABASE_TEST_PORT'] || 5432 %>
   username: <%= ENV['DATABASE_TEST_USERNAME'] || 'postgres' %>
@@ -95,20 +95,20 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    database: backend_production
+    database: seat_force_production
     host: <%= ENV['DATABASE_PROD_HOST'] %>
     port: <%= ENV['DATABASE_PROD_PORT'] || 5432 %>
     username: <%= ENV['DATABASE_PROD_USERNAME'] || 'postgres' %>
     password: <%= ENV['DATABASE_PROD_PASSWORD'] || 'postgres' %>
   cache:
     <<: *primary_production
-    database: backend_production_cache
+    database: seat_force_production_cache
     migrations_paths: db/cache_migrate
   queue:
     <<: *primary_production
-    database: backend_production_queue
+    database: seat_force_production_queue
     migrations_paths: db/queue_migrate
   cable:
     <<: *primary_production
-    database: backend_production_cable
+    database: seat_force_production_cable
     migrations_paths: db/cable_migrate
