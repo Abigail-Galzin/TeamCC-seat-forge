@@ -33,7 +33,14 @@ class Api::V1::AttendeesController < ApplicationController
       )
       render json: resp.as_json, status: resp.status
     else
-      render json: { error: @attendee.errors.full_messages }, status: :unprocessable_entity
+      response = Response::ResponseError.new(
+        code: "creation_conflict",
+        message: I18n.t('errors.create_error', model: Attendee.model_name.human),
+        details: @attendee.errors.full_messages,
+        status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
     end
   end
 

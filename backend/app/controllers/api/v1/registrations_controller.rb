@@ -5,7 +5,7 @@ class Api::V1::RegistrationsController < ApplicationController
 
   # GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations
   def index
-    @pagy, @registrations = pagy(@session.registrations, limit: 10)
+    @pagy, @registrations = pagy(@session.registrations)
 
     resp = Response::ResponseData.new(
       data: @registrations.as_json(except: [ :created_at, :updated_at ]),
@@ -38,7 +38,14 @@ class Api::V1::RegistrationsController < ApplicationController
       )
       render json: resp.as_json, status: resp.status
     else
-      render json: { error: @registration.errors.full_messages }, status: :unprocessable_entity
+      response = Response::ResponseError.new(
+        code: "creation_conflict",
+        message: I18n.t('errors.create_error', model: Registration.model_name.human),
+        details: @registration.errors.full_messages,
+        status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
     end
   end
 
@@ -51,7 +58,14 @@ class Api::V1::RegistrationsController < ApplicationController
       )
       render json: resp.as_json, status: resp.status
     else
-      render json: { error: @registration.errors.full_messages }, status: :unprocessable_entity
+      response = Response::ResponseError.new(
+        code: "confirmation_conflict",
+        message: I18n.t('errors.confirm_error', model: Registration.model_name.human),
+        details: @registration.errors.full_messages,
+        status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
     end
   end
 
@@ -64,7 +78,14 @@ class Api::V1::RegistrationsController < ApplicationController
       )
       render json: resp.as_json, status: resp.status
     else
-      render json: { error: @registration.errors.full_messages }, status: :unprocessable_entity
+      response = Response::ResponseError.new(
+        code: "cancellation_conflict",
+        message: I18n.t('errors.cancel_error', model: Registration.model_name.human),
+        details: @registration.errors.full_messages,
+        status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
     end
   end
 
