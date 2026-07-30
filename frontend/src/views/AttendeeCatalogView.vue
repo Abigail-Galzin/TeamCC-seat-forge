@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getWorkshops, type PaginatedResult, type Workshop } from '../services/workshops'
+import { getWorkshops } from '../services/workshops'
+import type { PaginatedResult } from '../types/pagination'
+import type { Workshop } from '../types/workshop'
 
 const router = useRouter()
 const perPage = 5

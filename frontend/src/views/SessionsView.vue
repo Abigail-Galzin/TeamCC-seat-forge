@@ -2,7 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { getSessionsForWorkshop, getWorkshopById, createRegistration, type Session, type Workshop } from '../services/workshops'
+import { getSessionsForWorkshop } from '../services/sessions'
+import { getWorkshopById } from '../services/workshops'
+import { createRegistration } from '../services/registrations'
+import type { Session } from '../types/session'
+import type { Workshop } from '../types/workshop'
 
 const route = useRoute()
 const router = useRouter()

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import { getRegistrationHistoryByEmail, type Registration } from '../services/workshops'
+import { getRegistrationHistoryByEmail } from '../services/registrations'
+import type { Registration } from '../types/registration'
 
 const toast = useToast()
 const email = ref('')

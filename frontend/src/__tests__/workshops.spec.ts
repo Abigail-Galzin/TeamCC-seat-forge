@@ -1,13 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as WorkshopsService from '../services/workshops'
+import type * as SessionsService from '../services/sessions'
+import type * as AttendeesService from '../services/attendees'
+import type * as RegistrationsService from '../services/registrations'
+import type * as DashboardService from '../services/dashboard'
 import type * as ApiService from '../services/api'
 
 let workshops: typeof WorkshopsService
+let sessions: typeof SessionsService
+let attendees: typeof AttendeesService
+let registrations: typeof RegistrationsService
+let dashboard: typeof DashboardService
 let api: typeof ApiService
 
 beforeEach(async () => {
   vi.resetModules()
   workshops = await import('../services/workshops')
+  sessions = await import('../services/sessions')
+  attendees = await import('../services/attendees')
+  registrations = await import('../services/registrations')
+  dashboard = await import('../services/dashboard')
   api = await import('../services/api')
 })
 
@@ -100,14 +112,14 @@ describe('updateWorkshop', () => {
 
 describe('getSessionsForWorkshop', () => {
   it('returns sessions for the given workshop', async () => {
-    const result = await workshops.getSessionsForWorkshop(1)
+    const result = await sessions.getSessionsForWorkshop(1)
 
     expect(result.items).toHaveLength(2)
     expect(result.items.every((s) => s.workshopId === 1)).toBe(true)
   })
 
   it('paginates sessions', async () => {
-    const result = await workshops.getSessionsForWorkshop(1, 1, 1)
+    const result = await sessions.getSessionsForWorkshop(1, 1, 1)
 
     expect(result.items).toHaveLength(1)
     expect(result.totalPages).toBe(2)
@@ -116,7 +128,7 @@ describe('getSessionsForWorkshop', () => {
 
 describe('createSession', () => {
   it('creates a session and makes it retrievable', async () => {
-    const session = await workshops.createSession({
+    const session = await sessions.createSession({
       workshopId: 2,
       startsAt: '2026-09-01T09:00:00.000Z',
       endsAt: '2026-09-01T11:00:00.000Z',
@@ -124,64 +136,64 @@ describe('createSession', () => {
       status: 'scheduled',
     })
 
-    const found = await workshops.getSessionById(session.id)
+    const found = await sessions.getSessionById(session.id)
     expect(found).toEqual(session)
   })
 })
 
 describe('getSessionById', () => {
   it('returns undefined for an unknown session', async () => {
-    const session = await workshops.getSessionById(999999)
+    const session = await sessions.getSessionById(999999)
     expect(session).toBeUndefined()
   })
 })
 
 describe('getAttendees', () => {
   it('returns a copy of the attendee list', async () => {
-    const attendees = await workshops.getAttendees()
-    expect(attendees).toHaveLength(2)
+    const all = await attendees.getAttendees()
+    expect(all).toHaveLength(2)
 
-    attendees.push({ id: 999, name: 'Injected', email: 'injected@example.com' })
+    all.push({ id: 999, name: 'Injected', email: 'injected@example.com' })
 
-    const attendeesAgain = await workshops.getAttendees()
+    const attendeesAgain = await attendees.getAttendees()
     expect(attendeesAgain).toHaveLength(2)
   })
 })
 
 describe('getAttendeeByEmail', () => {
   it('finds an attendee case-insensitively', async () => {
-    const attendee = await workshops.getAttendeeByEmail('ANA@EXAMPLE.COM')
+    const attendee = await attendees.getAttendeeByEmail('ANA@EXAMPLE.COM')
     expect(attendee?.name).toBe('Ana García')
   })
 
   it('returns undefined when no attendee matches', async () => {
-    const attendee = await workshops.getAttendeeByEmail('nobody@example.com')
+    const attendee = await attendees.getAttendeeByEmail('nobody@example.com')
     expect(attendee).toBeUndefined()
   })
 })
 
 describe('createAttendee', () => {
   it('creates a new attendee', async () => {
-    const attendee = await workshops.createAttendee('New Person', 'new@example.com')
+    const attendee = await attendees.createAttendee('New Person', 'new@example.com')
     expect(attendee).toMatchObject({ name: 'New Person', email: 'new@example.com' })
 
-    const all = await workshops.getAttendees()
+    const all = await attendees.getAttendees()
     expect(all).toHaveLength(3)
   })
 
   it('returns the existing attendee instead of duplicating', async () => {
-    const attendee = await workshops.createAttendee('Ana Duplicate', 'ANA@example.com')
+    const attendee = await attendees.createAttendee('Ana Duplicate', 'ANA@example.com')
     expect(attendee.id).toBe(1)
     expect(attendee.name).toBe('Ana García')
 
-    const all = await workshops.getAttendees()
+    const all = await attendees.getAttendees()
     expect(all).toHaveLength(2)
   })
 })
 
 describe('getSessionAttendeeStatuses', () => {
   it('returns attendee info and status for each registration', async () => {
-    const statuses = await workshops.getSessionAttendeeStatuses(101)
+    const statuses = await sessions.getSessionAttendeeStatuses(101)
 
     expect(statuses).toEqual(
       expect.arrayContaining([
@@ -192,14 +204,14 @@ describe('getSessionAttendeeStatuses', () => {
   })
 
   it('returns an empty list for a session with no registrations', async () => {
-    const statuses = await workshops.getSessionAttendeeStatuses(103)
+    const statuses = await sessions.getSessionAttendeeStatuses(103)
     expect(statuses).toEqual([])
   })
 })
 
 describe('createRegistration', () => {
   it('holds the registration when capacity is available', async () => {
-    const registration = await workshops.createRegistration({
+    const registration = await registrations.createRegistration({
       attendeeName: 'New Attendee',
       attendeeEmail: 'new-attendee@example.com',
       sessionId: 103,
@@ -210,13 +222,13 @@ describe('createRegistration', () => {
   })
 
   it('waitlists the registration when the session is full', async () => {
-    await workshops.createRegistration({
+    await registrations.createRegistration({
       attendeeName: 'First Attendee',
       attendeeEmail: 'first@example.com',
       sessionId: 103,
     })
 
-    const second = await workshops.createRegistration({
+    const second = await registrations.createRegistration({
       attendeeName: 'Second Attendee',
       attendeeEmail: 'second@example.com',
       sessionId: 103,
@@ -228,7 +240,7 @@ describe('createRegistration', () => {
 
   it('throws when the attendee already has an active registration for the session', async () => {
     await expect(
-      workshops.createRegistration({
+      registrations.createRegistration({
         attendeeName: 'Ana García',
         attendeeEmail: 'ana@example.com',
         sessionId: 101,
@@ -238,7 +250,7 @@ describe('createRegistration', () => {
 
   it('throws when the session does not exist', async () => {
     await expect(
-      workshops.createRegistration({
+      registrations.createRegistration({
         attendeeName: 'Someone',
         attendeeEmail: 'someone@example.com',
         sessionId: 999999,
@@ -247,20 +259,20 @@ describe('createRegistration', () => {
   })
 
   it('reuses an existing attendee instead of creating a duplicate', async () => {
-    await workshops.createRegistration({
+    await registrations.createRegistration({
       attendeeName: 'Luis Pérez',
       attendeeEmail: 'luis@example.com',
       sessionId: 103,
     })
 
-    const attendees = await workshops.getAttendees()
-    expect(attendees).toHaveLength(2)
+    const all = await attendees.getAttendees()
+    expect(all).toHaveLength(2)
   })
 })
 
 describe('confirmRegistration', () => {
   it('confirms a held registration', async () => {
-    const confirmed = await workshops.confirmRegistration(5002)
+    const confirmed = await registrations.confirmRegistration(5002)
 
     expect(confirmed.status).toBe('confirmed')
     expect(confirmed.confirmedAt).toEqual(expect.any(String))
@@ -268,13 +280,13 @@ describe('confirmRegistration', () => {
   })
 
   it('throws when the registration does not exist', async () => {
-    await expect(workshops.confirmRegistration(999999)).rejects.toThrow('Registration not found')
+    await expect(registrations.confirmRegistration(999999)).rejects.toThrow('Registration not found')
   })
 })
 
 describe('cancelRegistration', () => {
   it('cancels a registration', async () => {
-    const cancelled = await workshops.cancelRegistration(5002)
+    const cancelled = await registrations.cancelRegistration(5002)
 
     expect(cancelled.status).toBe('cancelled')
     expect(cancelled.cancelledAt).toEqual(expect.any(String))
@@ -282,33 +294,33 @@ describe('cancelRegistration', () => {
   })
 
   it('throws when the registration does not exist', async () => {
-    await expect(workshops.cancelRegistration(999999)).rejects.toThrow('Registration not found')
+    await expect(registrations.cancelRegistration(999999)).rejects.toThrow('Registration not found')
   })
 
   it('promotes the earliest waitlisted registration when a slot frees up', async () => {
-    const held = await workshops.createRegistration({
+    const held = await registrations.createRegistration({
       attendeeName: 'Held Attendee',
       attendeeEmail: 'held@example.com',
       sessionId: 103,
     })
-    const waitlisted = await workshops.createRegistration({
+    const waitlisted = await registrations.createRegistration({
       attendeeName: 'Waitlisted Attendee',
       attendeeEmail: 'waitlisted@example.com',
       sessionId: 103,
     })
     expect(waitlisted.status).toBe('waitlisted')
 
-    await workshops.cancelRegistration(held.id)
+    await registrations.cancelRegistration(held.id)
 
-    const statuses = await workshops.getSessionAttendeeStatuses(103)
+    const statuses = await sessions.getSessionAttendeeStatuses(103)
     const promoted = statuses.find((s) => s.email === 'waitlisted@example.com')
     expect(promoted?.status).toBe('held')
   })
 
   it('does not promote anyone when there is no waitlist', async () => {
-    await workshops.cancelRegistration(5002)
+    await registrations.cancelRegistration(5002)
 
-    const statuses = await workshops.getSessionAttendeeStatuses(101)
+    const statuses = await sessions.getSessionAttendeeStatuses(101)
     expect(statuses.find((s) => s.email === 'ana@example.com')?.status).toBe('confirmed')
     expect(statuses.some((s) => s.status === 'held')).toBe(false)
   })
@@ -316,33 +328,33 @@ describe('cancelRegistration', () => {
 
 describe('getRegistrationsForAttendee', () => {
   it('returns all registrations for an attendee', async () => {
-    const registrations = await workshops.getRegistrationsForAttendee(2)
-    expect(registrations).toHaveLength(2)
+    const result = await registrations.getRegistrationsForAttendee(2)
+    expect(result).toHaveLength(2)
   })
 
   it('returns an empty list when the attendee has no registrations', async () => {
-    const registrations = await workshops.getRegistrationsForAttendee(999999)
-    expect(registrations).toEqual([])
+    const result = await registrations.getRegistrationsForAttendee(999999)
+    expect(result).toEqual([])
   })
 })
 
 describe('getRegistrationHistoryByEmail', () => {
   it('returns the attendee and their registrations', async () => {
-    const history = await workshops.getRegistrationHistoryByEmail('luis@example.com')
+    const history = await registrations.getRegistrationHistoryByEmail('luis@example.com')
 
     expect(history?.attendee.name).toBe('Luis Pérez')
     expect(history?.registrations).toHaveLength(2)
   })
 
   it('returns undefined for an unknown email', async () => {
-    const history = await workshops.getRegistrationHistoryByEmail('nobody@example.com')
+    const history = await registrations.getRegistrationHistoryByEmail('nobody@example.com')
     expect(history).toBeUndefined()
   })
 })
 
 describe('getDashboardMetrics', () => {
   it('computes metrics from the current state', async () => {
-    const metrics = await workshops.getDashboardMetrics()
+    const metrics = await dashboard.getDashboardMetrics()
 
     expect(metrics).toMatchObject({
       upcomingSessions: 3,
@@ -358,23 +370,23 @@ describe('getDashboardMetrics', () => {
   })
 
   it('reflects newly full sessions and re-sorts waitlisted sessions by size', async () => {
-    await workshops.createRegistration({
+    await registrations.createRegistration({
       attendeeName: 'Filler',
       attendeeEmail: 'filler@example.com',
       sessionId: 103,
     })
-    await workshops.createRegistration({
+    await registrations.createRegistration({
       attendeeName: 'Waitlisted 1',
       attendeeEmail: 'w1@example.com',
       sessionId: 103,
     })
-    await workshops.createRegistration({
+    await registrations.createRegistration({
       attendeeName: 'Waitlisted 2',
       attendeeEmail: 'w2@example.com',
       sessionId: 103,
     })
 
-    const metrics = await workshops.getDashboardMetrics()
+    const metrics = await dashboard.getDashboardMetrics()
 
     expect(metrics.fullSessions).toBe(1)
     expect(metrics.topWaitlistedSessions[0]).toMatchObject({ id: 103, waitlistSize: 2 })

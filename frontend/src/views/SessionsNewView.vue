@@ -2,7 +2,9 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { createSession, getWorkshopById, type Workshop } from '../services/workshops'
+import { createSession } from '../services/sessions'
+import { getWorkshopById } from '../services/workshops'
+import type { Workshop } from '../types/workshop'
 
 const route = useRoute()
 const router = useRouter()

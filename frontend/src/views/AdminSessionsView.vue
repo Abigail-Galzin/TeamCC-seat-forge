@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getWorkshopById, getSessionsForWorkshop, type Session, type Workshop } from '../services/workshops'
+import { getWorkshopById } from '../services/workshops'
+import { getSessionsForWorkshop } from '../services/sessions'
+import type { Session } from '../types/session'
+import type { Workshop } from '../types/workshop'
 
 const route = useRoute()
 const router = useRouter()
