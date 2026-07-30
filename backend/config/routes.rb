@@ -12,6 +12,12 @@ Rails.application.routes.draw do
       resources :workshops do
         resources :sessions
       end
+
+      resources :sessions, only: [:index, :show] do
+        member do
+          get :availability
+        end
+      end
     end
   end
 end
