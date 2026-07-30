@@ -1,9 +1,19 @@
+import axios from 'axios'
+import type { ApiErrorBody } from '../types/api-error'
+
 /**
- * Servicio API centralizado para comunicarse con el backend Rails.
- * La URL base se obtiene de la variable de entorno VITE_API_BASE_URL.
+ * Centralized API service for communicating with the Rails backend.
+ * The base URL comes from the VITE_API_BASE_URL environment variable.
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    Accept: 'application/json',
+  },
+})
 
 export interface BackendHealthResult {
   ok: boolean
@@ -14,43 +24,56 @@ export interface BackendHealthResult {
 }
 
 /**
- * Función de ejemplo que realiza una llamada al endpoint /up del backend de Rails.
+ * Example function that calls the Rails backend's /up endpoint.
  */
 export async function checkBackendHealth(): Promise<BackendHealthResult> {
   const targetUrl = `${API_BASE_URL}/up`
   const now = new Date().toLocaleTimeString()
 
   try {
-    const response = await fetch(targetUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    })
+    const response = await apiClient.get('/up')
 
-    if (response.ok) {
-      return {
-        ok: true,
-        statusText: 'Backend Conectado (HTTP 200 OK)',
-        statusCode: response.status,
-        url: targetUrl,
-        timestamp: now,
-      }
-    } else {
+    return {
+      ok: true,
+      statusText: 'Backend connected (HTTP 200 OK)',
+      statusCode: response.status,
+      url: targetUrl,
+      timestamp: now,
+    }
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response) {
       return {
         ok: false,
-        statusText: `El servidor respondió con código HTTP ${response.status}`,
-        statusCode: response.status,
+        statusText: `The server responded with HTTP status ${error.response.status}`,
+        statusCode: error.response.status,
         url: targetUrl,
         timestamp: now,
       }
     }
-  } catch (error) {
+
     return {
       ok: false,
-      statusText: 'No se pudo conectar con el backend (Servidor fuera de línea o error CORS)',
+      statusText: 'Could not connect to the backend (server offline or CORS error)',
       url: targetUrl,
       timestamp: now,
     }
   }
+}
+
+/**
+ * Extracts a user-facing message from either a mock service error (plain Error)
+ * or a real backend error following the { error: { code, message, details } } contract.
+ * Views should always go through this instead of reading error.message directly,
+ * so no view code needs to change once a service swaps its mock body for a real apiClient call.
+ */
+export function getErrorMessage(error: unknown, fallback = 'Unexpected error'): string {
+  if (axios.isAxiosError<ApiErrorBody>(error)) {
+    return error.response?.data?.error?.message || error.message || fallback
+  }
+
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return fallback
 }

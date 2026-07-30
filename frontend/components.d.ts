@@ -21,6 +21,8 @@ declare module 'vue' {
     ComponentsGuideView: typeof import('./src/components/ComponentsGuideView.vue')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     DataTable: typeof import('primevue/datatable')['default']
+    DataView: typeof import('primevue/dataview')['default']
+    DatePicker: typeof import('primevue/datepicker')['default']
     Dialog: typeof import('primevue/dialog')['default']
     IconField: typeof import('primevue/iconfield')['default']
     InputIcon: typeof import('primevue/inputicon')['default']
@@ -37,6 +39,7 @@ declare module 'vue' {
     Select: typeof import('primevue/select')['default']
     Slider: typeof import('primevue/slider')['default']
     Tag: typeof import('primevue/tag')['default']
+    Textarea: typeof import('primevue/textarea')['default']
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
   }
