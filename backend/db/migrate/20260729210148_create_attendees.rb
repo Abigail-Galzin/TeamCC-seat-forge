@@ -1,4 +1,4 @@
-class CreateAttendees < ActiveRecord::Migration[8.1]
+class CreateAttendees < ActiveRecord::Migration[7.2]
 
   def change
     create_table :attendees do |t|

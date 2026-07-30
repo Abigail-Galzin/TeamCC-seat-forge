@@ -1,4 +1,4 @@
-class AddDefaultTimestamps < ActiveRecord::Migration[8.1]
+class AddDefaultTimestamps < ActiveRecord::Migration[7.2]
   def change
     change_column_default :attendees, :created_at, -> { "CURRENT_TIMESTAMP" }
     change_column_default :attendees, :updated_at, -> { "CURRENT_TIMESTAMP" }

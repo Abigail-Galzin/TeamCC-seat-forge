@@ -1,4 +1,4 @@
-class CreateRegistrations < ActiveRecord::Migration[8.1]
+class CreateRegistrations < ActiveRecord::Migration[7.2]
   def change
     create_table :registrations do |t|
       t.string :status, null: false, default: "available"
@@ -8,7 +8,6 @@ class CreateRegistrations < ActiveRecord::Migration[8.1]
       t.references :attendee, null: false, foreign_key: true
 
       t.timestamps
-    end      
-
+    end
   end
 end
