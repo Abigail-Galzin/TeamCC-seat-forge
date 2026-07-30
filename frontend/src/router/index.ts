@@ -9,12 +9,12 @@ const router = createRouter({
       component: () => import('../views/DashboardView.vue'),
     },
     {
-      path: '/workshops',
+      path: '/workshops-catalog',
       name: 'attendee-catalog',
       component: () => import('../views/AttendeeCatalogView.vue'),
     },
     {
-      path: '/workshops/:workshopId/sessions',
+      path: '/workshops-catalog/:workshopId/sessions',
       name: 'attendee-workshop-sessions',
       component: () => import('../views/SessionsView.vue'),
     },
@@ -24,32 +24,32 @@ const router = createRouter({
       component: () => import('../views/SessionsBrowseView.vue'),
     },
     {
-      path: '/admin/workshops',
+      path: '/workshops',
       name: 'admin-workshops',
       component: () => import('../views/WorkshopAdminView.vue'),
     },
     {
-      path: '/admin/workshops/new',
+      path: '/workshops/new',
       name: 'admin-workshop-new',
       component: () => import('../views/WorkshopsNewView.vue'),
     },
     {
-      path: '/admin/workshops/:workshopId/edit',
+      path: '/workshops/:workshopId/edit',
       name: 'admin-workshop-edit',
       component: () => import('../views/WorkshopsEditView.vue'),
     },
     {
-      path: '/admin/workshops/:workshopId/sessions',
+      path: '/workshops/:workshopId/sessions',
       name: 'admin-workshop-sessions',
       component: () => import('../views/AdminSessionsView.vue'),
     },
     {
-      path: '/admin/workshops/:workshopId/sessions/new',
+      path: '/workshops/:workshopId/sessions/new',
       name: 'admin-workshop-sessions-new',
       component: () => import('../views/SessionsNewView.vue'),
     },
     {
-      path: '/admin/sessions/:sessionId/attendees',
+      path: '/sessions/:sessionId/attendees',
       name: 'admin-session-attendees',
       component: () => import('../views/SessionAttendeesView.vue'),
     },
