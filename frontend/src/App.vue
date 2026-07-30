@@ -1,37 +1,27 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
-const isDarkMode = ref(false);
+const router = useRouter()
+const isDarkMode = ref(false)
 
 const toggleDarkMode = () => {
-  isDarkMode.value = !isDarkMode.value;
-  document.documentElement.classList.toggle("my-app-dark");
-};
+  isDarkMode.value = !isDarkMode.value
+  document.documentElement.classList.toggle('my-app-dark')
+}
 
 const items = ref([
   {
-    label: "Inicio",
-    icon: "pi pi-home",
-    command: () => router.push("/"),
+    label: 'Inicio',
+    icon: 'pi pi-home',
+    command: () => router.push('/')
   },
   {
-    label: "Catálogo de Componentes",
-    icon: "pi pi-th-large",
-    command: () => router.push("/components"),
-  },
-  {
-    label: "Workshops",
-    icon: "pi pi-book",
-    command: () => router.push("/workshops"),
-  },
-  {
-    label: "Asistentes",
-    icon: "pi pi-users",
-    command: () => router.push("/attendees"),
-  },
-]);
+    label: 'Catálogo de Componentes',
+    icon: 'pi pi-th-large',
+    command: () => router.push('/components')
+  }
+])
 </script>
 
 <template>
@@ -75,9 +65,7 @@ const items = ref([
 <style>
 body {
   margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: #f8fafc;
   color: #1e293b;
 }
