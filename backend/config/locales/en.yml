@@ -32,6 +32,7 @@ en:
 
   success:
     response: "%{model} returned correctly"
+    creation: "%{model} created"
 
   errors:
     response_not_found: "Not found the %{model}"
