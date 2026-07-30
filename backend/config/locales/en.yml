@@ -32,6 +32,9 @@ en:
 
   success:
     response: "%{model} returned correctly"
+    creation: "%{model} created"
 
   errors:
     response_not_found: "Not found the %{model}"
+    create_error: "Could not create the %{model}"
+    invalid_characters: "contains invalid characters"
