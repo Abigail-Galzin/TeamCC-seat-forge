@@ -1,6 +1,5 @@
 class Registration < ApplicationRecord
-  belongs_to :Attendee
-
+  belongs_to :attendee
 
   enum :status, {
       available:"available",
@@ -12,14 +11,10 @@ class Registration < ApplicationRecord
   }, validate: true
 
   validates :status, presence: true
-
    
   scope :by_status,      ->(status)   { where(status: status) }
-
 
   def expired?
     hold_expires_at.present? && hold_expires_at < Time.current
   end
-
-
 end
