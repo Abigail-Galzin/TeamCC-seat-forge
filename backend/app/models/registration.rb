@@ -1,5 +1,6 @@
 class Registration < ApplicationRecord
   belongs_to :attendee
+  belongs_to :session
 
   enum :status, {
       available:"available",
@@ -11,7 +12,7 @@ class Registration < ApplicationRecord
   }, validate: true
 
   validates :status, presence: true
-   
+
   scope :by_status,      ->(status)   { where(status: status) }
 
   def expired?
