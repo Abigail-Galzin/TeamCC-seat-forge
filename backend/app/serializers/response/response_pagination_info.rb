@@ -6,11 +6,11 @@ module Response
 
     def as_json(*)
       {
-        pagination:{ 
+        pagination:{
             page: @pagy_data.page,
-            pages: @pagy_data.pages,
+            pages: @pagy_data.last,
             count: @pagy_data.count,
-            limit: @pagy_data.limit,
+            limit: @pagy_data.items,
             next: @pagy_data.next,
             prev: @pagy_data.prev
           }

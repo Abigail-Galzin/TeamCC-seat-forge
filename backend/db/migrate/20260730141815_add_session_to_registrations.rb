@@ -1,4 +1,4 @@
-class AddSessionToRegistrations < ActiveRecord::Migration[8.1]
+class AddSessionToRegistrations < ActiveRecord::Migration[7.2]
   def change
     add_reference :registrations, :session, null: false, foreign_key: true
   end

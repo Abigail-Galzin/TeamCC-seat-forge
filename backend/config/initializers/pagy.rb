@@ -1,1 +1,2 @@
-require "pagy/extras/limit"
+Pagy::DEFAULT[:items] = 10
+Pagy::DEFAULT[:page_param] = :page

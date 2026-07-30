@@ -1,4 +1,4 @@
-class CreateSessions < ActiveRecord::Migration[8.1]
+class CreateSessions < ActiveRecord::Migration[7.2]
   def change
     create_table :sessions do |t|
       t.datetime :starts_at, null:false
