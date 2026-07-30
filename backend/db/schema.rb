@@ -10,7 +10,28 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 0) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_212751) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "attendees", force: :cascade do |t|
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "email", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["email"], name: "index_attendees_on_email", unique: true
+  end
+
+  create_table "registrations", force: :cascade do |t|
+    t.bigint "attendee_id", null: false
+    t.datetime "cancelled_at"
+    t.datetime "confirmed_at"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "hold_expires_at"
+    t.string "status", default: "available", null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["attendee_id"], name: "index_registrations_on_attendee_id"
+  end
+
+  add_foreign_key "registrations", "attendees"
 end
