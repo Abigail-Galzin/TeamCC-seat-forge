@@ -1,0 +1,61 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { getDashboardMetrics } from '../services/dashboard'
+import { getErrorMessage } from '../services/api'
+import type { DashboardMetrics } from '../types/dashboard'
+
+const metrics = ref<DashboardMetrics | null>(null)
+const loading = ref(true)
+const loadError = ref<string | null>(null)
+
+onMounted(async () => {
+  try {
+    metrics.value = await getDashboardMetrics()
+  } catch (error) {
+    loadError.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
+})
+</script>
+
+<template>
+  <div class="page">
+    <h1>Operations dashboard</h1>
+
+    <div v-if="loading" class="state">Loading dashboard...</div>
+    <Message v-else-if="loadError" severity="error">{{ loadError }}</Message>
+    <template v-else-if="metrics">
+      <div class="grid">
+        <Card><template #content><h2>{{ metrics.upcomingSessions }}</h2><p>Upcoming sessions</p></template></Card>
+        <Card><template #content><h2>{{ metrics.heldRegistrations }}</h2><p>Held registrations</p></template></Card>
+        <Card><template #content><h2>{{ metrics.confirmedRegistrations }}</h2><p>Confirmed registrations</p></template></Card>
+        <Card><template #content><h2>{{ metrics.waitlistedRegistrations }}</h2><p>Waitlisted registrations</p></template></Card>
+        <Card><template #content><h2>{{ metrics.expiredHolds }}</h2><p>Expired holds</p></template></Card>
+        <Card><template #content><h2>{{ metrics.fullSessions }}</h2><p>Full sessions</p></template></Card>
+      </div>
+
+      <Card v-if="metrics.topWaitlistedSessions.length" class="list-card">
+        <template #title>Top waitlisted sessions</template>
+        <template #content>
+          <ul>
+            <li v-for="item in metrics.topWaitlistedSessions" :key="item.id">
+              {{ item.title }} — {{ item.waitlistSize }} waitlisted
+            </li>
+          </ul>
+        </template>
+      </Card>
+      <p v-else class="state">No sessions have a waitlist yet.</p>
+    </template>
+  </div>
+</template>
+
+<style scoped>
+.page { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
+.state { padding: 1rem; background: #f8fafc; border-radius: 12px; margin-top: 1rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.grid :deep(h2) { margin: 0; }
+.grid :deep(p) { margin: 0.25rem 0 0; }
+.list-card { margin-top: 1rem; }
+ul { margin: 0.5rem 0 0; padding-left: 1rem; }
+</style>

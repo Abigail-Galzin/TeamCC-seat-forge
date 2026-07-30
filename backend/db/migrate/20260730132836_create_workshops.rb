@@ -1,4 +1,4 @@
-class CreateWorkshops < ActiveRecord::Migration[8.1]
+class CreateWorkshops < ActiveRecord::Migration[7.2]
   def change
     create_table :workshops do |t|
       t.string :title, null: false

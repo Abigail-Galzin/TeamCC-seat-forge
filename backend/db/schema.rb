@@ -10,9 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_30_141815) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_30_141815) do
   # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_catalog.plpgsql"
+  enable_extension "plpgsql"
 
   create_table "attendees", force: :cascade do |t|
     t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
@@ -28,21 +28,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_141815) do
     t.datetime "confirmed_at"
     t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "hold_expires_at"
-    t.bigint "session_id", null: false
     t.string "status", default: "available", null: false
     t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.bigint "session_id", null: false
     t.index ["attendee_id"], name: "index_registrations_on_attendee_id"
     t.index ["session_id"], name: "index_registrations_on_session_id"
   end
 
   create_table "sessions", force: :cascade do |t|
-    t.integer "capacity", null: false
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.datetime "ends_at", null: false
     t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.integer "capacity", null: false
     t.string "status", null: false
-    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.bigint "workshop_id", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["workshop_id"], name: "index_sessions_on_workshop_id"
     t.check_constraint "capacity > 0", name: "sessions_capacity_check"
     t.check_constraint "starts_at < ends_at", name: "sessions_dates_check"
@@ -50,11 +50,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_141815) do
   end
 
   create_table "workshops", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "description"
+    t.string "topic", null: false
     t.boolean "active", default: true, null: false
     t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.string "description"
-    t.string "title", null: false
-    t.string "topic", null: false
     t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
   end
 
