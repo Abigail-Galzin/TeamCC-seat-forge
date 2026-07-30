@@ -2,20 +2,33 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getWorkshops } from '../services/workshops'
+import { getErrorMessage } from '../services/api'
 import type { PaginatedResult } from '../types/pagination'
 import type { Workshop } from '../types/workshop'
 
 const router = useRouter()
 const perPage = 5
-const workshops = ref<PaginatedResult<Workshop>>({ items: [], total: 0, page: 1, perPage, totalPages: 1 })
+const workshops = ref<PaginatedResult<Workshop>>({
+  message: null,
+  data: [],
+  status: 'ok',
+  pagination: { page: 1, pages: 1, count: 0, limit: perPage, next: null, prev: null },
+})
 const loading = ref(true)
+const loadError = ref<string | null>(null)
 
-const first = computed(() => (workshops.value.page - 1) * perPage)
+const first = computed(() => (workshops.value.pagination.page - 1) * perPage)
 
 async function loadPage(pageNumber = 1) {
   loading.value = true
-  workshops.value = await getWorkshops(pageNumber, perPage, false)
-  loading.value = false
+  loadError.value = null
+  try {
+    workshops.value = await getWorkshops(pageNumber, perPage, false)
+  } catch (error) {
+    loadError.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
 }
 
 function onPage(event: { first: number; rows: number }) {
@@ -33,17 +46,19 @@ onMounted(() => loadPage())
         <p class="eyebrow">Admin</p>
         <h1>Manage workshops</h1>
       </div>
-      <Button label="Add" severity="primary" @click="router.push('/workshops/new')" />
+      <Button label="Add" severity="primary" @click="router.push({ name: 'admin-workshop-new' })" />
     </div>
+
+    <Message v-if="loadError" severity="error" class="load-error">{{ loadError }}</Message>
 
     <div class="workshops-table-wrapper">
       <DataTable
-        :value="workshops.items"
+        :value="workshops.data"
         :loading="loading"
         :paginator="true"
         :rows="perPage"
         :first="first"
-        :totalRecords="workshops.total"
+        :totalRecords="workshops.pagination.count"
         :pageLinkSize="3"
         responsiveLayout="scroll"
         emptyMessage="No workshops found"
@@ -67,13 +82,13 @@ onMounted(() => loadPage())
                 size="small"
                 class="icon-button"
                 aria-label="Edit"
-                @click="router.push(`/admin/workshops/${data.id}/edit`)"
+                @click="router.push({ name: 'admin-workshop-edit', params: { workshopId: data.id } })"
               />
               <Button
                 label="Sessions"
                 severity="primary"
                 size="small"
-                @click="router.push(`/admin/workshops/${data.id}/sessions`)"
+                @click="router.push({ name: 'admin-workshop-sessions', params: { workshopId: data.id } })"
               />
             </div>
           </template>
@@ -87,6 +102,7 @@ onMounted(() => loadPage())
 .page { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; font-size: 0.8rem; margin-bottom: 0.25rem; }
+.load-error { margin-bottom: 1rem; }
 .workshops-table-wrapper { overflow-x: auto; }
 .row-actions { display: inline-flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
 .icon-button { flex-shrink: 0; }

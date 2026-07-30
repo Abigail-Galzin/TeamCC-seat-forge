@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { createSession } from '../services/sessions'
 import { getWorkshopById } from '../services/workshops'
+import { getErrorMessage } from '../services/api'
 import type { Workshop } from '../types/workshop'
 
 const route = useRoute()
@@ -26,7 +27,11 @@ const statusOptions = [
 ]
 
 onMounted(async () => {
-  workshop.value = await getWorkshopById(workshopId)
+  try {
+    workshop.value = await getWorkshopById(workshopId)
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Load failed', detail: getErrorMessage(error), life: 4000 })
+  }
 })
 
 async function submit() {
@@ -45,10 +50,9 @@ async function submit() {
       status: form.status,
     })
     toast.add({ severity: 'success', summary: 'Session created', detail: 'The session was created successfully.', life: 3000 })
-    router.push(`/admin/workshops/${workshopId}/sessions`)
+    router.push({ name: 'admin-workshop-sessions', params: { workshopId } })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-    toast.add({ severity: 'error', summary: 'Creation failed', detail: message, life: 4000 })
+    toast.add({ severity: 'error', summary: 'Creation failed', detail: getErrorMessage(error), life: 4000 })
   } finally {
     submitting.value = false
   }
@@ -67,7 +71,7 @@ async function submit() {
         severity="primary"
         variant="outlined"
         type="button"
-        @click="router.push(`/admin/workshops/${workshopId}/sessions`)"
+        @click="router.push({ name: 'admin-workshop-sessions', params: { workshopId } })"
       />
     </div>
 

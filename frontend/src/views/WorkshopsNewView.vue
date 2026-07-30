@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { createWorkshop } from '../services/workshops'
+import { getErrorMessage } from '../services/api'
 
 const router = useRouter()
 const toast = useToast()
@@ -19,10 +20,9 @@ async function submit() {
   try {
     await createWorkshop({ ...form })
     toast.add({ severity: 'success', summary: 'Workshop created', detail: 'The workshop was created successfully.', life: 3000 })
-    router.push('/admin/workshops')
+    router.push({ name: 'admin-workshops' })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-    toast.add({ severity: 'error', summary: 'Creation failed', detail: message, life: 4000 })
+    toast.add({ severity: 'error', summary: 'Creation failed', detail: getErrorMessage(error), life: 4000 })
   } finally {
     submitting.value = false
   }

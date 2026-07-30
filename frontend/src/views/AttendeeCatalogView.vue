@@ -2,18 +2,31 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getWorkshops } from '../services/workshops'
+import { getErrorMessage } from '../services/api'
 import type { PaginatedResult } from '../types/pagination'
 import type { Workshop } from '../types/workshop'
 
 const router = useRouter()
 const perPage = 5
-const workshops = ref<PaginatedResult<Workshop>>({ items: [], total: 0, page: 1, perPage, totalPages: 1 })
+const workshops = ref<PaginatedResult<Workshop>>({
+  message: null,
+  data: [],
+  status: 'ok',
+  pagination: { page: 1, pages: 1, count: 0, limit: perPage, next: null, prev: null },
+})
 const loading = ref(true)
+const loadError = ref<string | null>(null)
 
 async function loadPage(pageNumber = 1) {
   loading.value = true
-  workshops.value = await getWorkshops(pageNumber, perPage, true)
-  loading.value = false
+  loadError.value = null
+  try {
+    workshops.value = await getWorkshops(pageNumber, perPage, true)
+  } catch (error) {
+    loadError.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
 }
 
 function onPage(event: { first: number; rows: number }) {
@@ -33,15 +46,17 @@ onMounted(() => loadPage())
       </div>
     </div>
 
+    <Message v-if="loadError" severity="error" class="load-error">{{ loadError }}</Message>
+
     <DataView
-      :value="workshops.items"
+      :value="workshops.data"
       :loading="loading"
       layout="grid"
       lazy
       paginator
       :rows="perPage"
-      :first="(workshops.page - 1) * perPage"
-      :totalRecords="workshops.total"
+      :first="(workshops.pagination.page - 1) * perPage"
+      :totalRecords="workshops.pagination.count"
       @page="onPage"
     >
       <template #grid="{ items }">
@@ -57,7 +72,7 @@ onMounted(() => loadPage())
                 label="View sessions & register"
                 severity="primary"
                 class="view-sessions-btn"
-                @click="router.push(`/workshops/${workshop.id}/sessions`)"
+                @click="router.push({ name: 'attendee-workshop-sessions', params: { workshopId: workshop.id } })"
               />
             </template>
           </Card>
@@ -71,8 +86,17 @@ onMounted(() => loadPage())
 <style scoped>
 .page { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
 .page-header { margin-bottom: 1rem; }
-.eyebrow { text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; font-size: 0.8rem; margin-bottom: 0.25rem; }
+.load-error { margin-bottom: 1rem; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; margin-bottom: 0.25rem; }
 .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+:deep(.p-dataview),
+:deep(.p-dataview-content) {
+  background: transparent;
+  border: none;
+}
+:deep(.p-paginator) {
+  margin-top: 15px;
+}
 .tag { margin-bottom: 0.5rem; }
 .view-sessions-btn { width: 100%; margin-top: 0.75rem; justify-content: center; }
 </style>

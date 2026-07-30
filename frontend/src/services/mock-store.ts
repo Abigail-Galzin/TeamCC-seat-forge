@@ -2,6 +2,7 @@ import type { Workshop } from '../types/workshop'
 import type { Session } from '../types/session'
 import type { Attendee } from '../types/attendee'
 import type { Registration } from '../types/registration'
+import type { PaginatedResult } from '../types/pagination'
 
 const initialWorkshops: Workshop[] = [
   {
@@ -95,4 +96,25 @@ export function getActiveRegistrationsForSession(sessionId: number): Registratio
   return registrationStore.filter(
     (registration) => registration.sessionId === sessionId && ['held', 'confirmed'].includes(registration.status),
   )
+}
+
+export function paginateMock<T>(all: T[], page: number, perPage: number): PaginatedResult<T> {
+  const count = all.length
+  const pages = Math.max(1, Math.ceil(count / perPage))
+  const start = (page - 1) * perPage
+  const data = all.slice(start, start + perPage)
+
+  return {
+    message: null,
+    data,
+    status: 'ok',
+    pagination: {
+      page,
+      pages,
+      count,
+      limit: perPage,
+      next: page < pages ? page + 1 : null,
+      prev: page > 1 ? page - 1 : null,
+    },
+  }
 }

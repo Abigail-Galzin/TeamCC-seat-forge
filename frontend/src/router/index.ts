@@ -10,12 +10,6 @@ const router = createRouter({
     },
     {
       path: '/workshops',
-      name: 'catalog',
-      component: () => import('../views/AttendeeCatalogView.vue'),
-    },
-    
-    {
-      path: '/workshops',
       name: 'attendee-catalog',
       component: () => import('../views/AttendeeCatalogView.vue'),
     },
@@ -23,6 +17,11 @@ const router = createRouter({
       path: '/workshops/:workshopId/sessions',
       name: 'attendee-workshop-sessions',
       component: () => import('../views/SessionsView.vue'),
+    },
+    {
+      path: '/sessions',
+      name: 'sessions-browse',
+      component: () => import('../views/SessionsBrowseView.vue'),
     },
     {
       path: '/admin/workshops',
@@ -53,10 +52,6 @@ const router = createRouter({
       path: '/admin/sessions/:sessionId/attendees',
       name: 'admin-session-attendees',
       component: () => import('../views/SessionAttendeesView.vue'),
-    },
-    {
-      path: '/workshops/new',
-      redirect: '/admin/workshops/new',
     },
     {
       path: '/attendee-history',

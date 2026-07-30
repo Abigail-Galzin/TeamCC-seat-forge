@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getWorkshopById } from '../services/workshops'
 import { getSessionsForWorkshop } from '../services/sessions'
+import { getErrorMessage } from '../services/api'
 import type { Session } from '../types/session'
 import type { Workshop } from '../types/workshop'
 
@@ -12,12 +13,18 @@ const workshopId = Number(route.params.workshopId)
 const workshop = ref<Workshop | undefined>()
 const sessions = ref<Session[]>([])
 const loading = ref(true)
+const loadError = ref<string | null>(null)
 
 onMounted(async () => {
-  workshop.value = await getWorkshopById(workshopId)
-  const pageResult = await getSessionsForWorkshop(workshopId)
-  sessions.value = pageResult.items
-  loading.value = false
+  try {
+    workshop.value = await getWorkshopById(workshopId)
+    const pageResult = await getSessionsForWorkshop(workshopId)
+    sessions.value = pageResult.data
+  } catch (error) {
+    loadError.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -33,15 +40,17 @@ onMounted(async () => {
           label="Back"
           severity="primary"
           variant="outlined"
-          @click="router.push('/admin/workshops')"
+          @click="router.push({ name: 'admin-workshops' })"
         />
         <Button
           label="Add"
           severity="primary"
-          @click="router.push(`/admin/workshops/${workshopId}/sessions/new`)"
+          @click="router.push({ name: 'admin-workshop-sessions-new', params: { workshopId } })"
         />
       </div>
     </div>
+
+    <Message v-if="loadError" severity="error" class="load-error">{{ loadError }}</Message>
 
     <div class="sessions-table-wrapper">
       <DataTable
@@ -66,7 +75,7 @@ onMounted(async () => {
                 label="View attendees"
                 severity="primary"
                 size="small"
-                @click="router.push(`/admin/sessions/${data.id}/attendees`)"
+                @click="router.push({ name: 'admin-session-attendees', params: { sessionId: data.id } })"
               />
             </div>
           </template>
@@ -81,6 +90,7 @@ onMounted(async () => {
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; font-size: 0.8rem; margin-bottom: 0.25rem; }
 .header-actions { display: flex; gap: 0.75rem; align-items: center; }
+.load-error { margin-bottom: 1rem; }
 .sessions-table-wrapper { overflow-x: auto; }
 .row-actions { display: inline-flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
 </style>

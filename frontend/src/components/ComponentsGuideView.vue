@@ -10,12 +10,12 @@ const searchQuery = ref('')
 const selectedCategory = ref('all')
 
 const categories = [
-  { label: 'Todos', value: 'all', icon: 'pi pi-th-large' },
-  { label: 'Formularios', value: 'forms', icon: 'pi pi-file-edit' },
-  { label: 'Botones', value: 'buttons', icon: 'pi pi-send' },
-  { label: 'Tablas y Datos', value: 'data', icon: 'pi pi-table' },
-  { label: 'Paneles y Layout', value: 'panels', icon: 'pi pi-box' },
-  { label: 'Feedback y Overlays', value: 'feedback', icon: 'pi pi-bell' },
+  { label: 'All', value: 'all', icon: 'pi pi-th-large' },
+  { label: 'Forms', value: 'forms', icon: 'pi pi-file-edit' },
+  { label: 'Buttons', value: 'buttons', icon: 'pi pi-send' },
+  { label: 'Tables & Data', value: 'data', icon: 'pi pi-table' },
+  { label: 'Panels & Layout', value: 'panels', icon: 'pi pi-box' },
+  { label: 'Feedback & Overlays', value: 'feedback', icon: 'pi pi-bell' },
 ]
 
 const textVal = ref('')
@@ -38,34 +38,34 @@ const isDialogVisible = ref(false)
 const progressVal = ref(75)
 
 const tableData = ref([
-  { id: 1, name: 'Asiento 101', section: 'Zona Norte', status: 'Disponible', price: '$50' },
-  { id: 2, name: 'Asiento 102', section: 'Zona Norte', status: 'Ocupado', price: '$50' },
-  { id: 3, name: 'Asiento 201', section: 'VIP Lounge', status: 'Reservado', price: '$120' },
-  { id: 4, name: 'Asiento 202', section: 'VIP Lounge', status: 'Disponible', price: '$120' }
+  { id: 1, name: 'Seat 101', section: 'North Zone', status: 'Available', price: '$50' },
+  { id: 2, name: 'Seat 102', section: 'North Zone', status: 'Occupied', price: '$50' },
+  { id: 3, name: 'Seat 201', section: 'VIP Lounge', status: 'Reserved', price: '$120' },
+  { id: 4, name: 'Seat 202', section: 'VIP Lounge', status: 'Available', price: '$120' }
 ])
 
 const getStatusSeverity = (status: string) => {
   switch (status) {
-    case 'Disponible': return 'success'
-    case 'Ocupado': return 'danger'
-    case 'Reservado': return 'warn'
+    case 'Available': return 'success'
+    case 'Occupied': return 'danger'
+    case 'Reserved': return 'warn'
     default: return 'info'
   }
 }
 
 const showToastSuccess = () => {
-  toast.add({ severity: 'success', summary: 'Acción Exitosa', detail: 'El componente Toast está funcionando correctamente.', life: 3000 })
+  toast.add({ severity: 'success', summary: 'Action Successful', detail: 'The Toast component is working correctly.', life: 3000 })
 }
 
 const showConfirm = () => {
   confirm.require({
-    message: '¿Estás seguro de que deseas realizar esta prueba?',
-    header: 'Confirmación de Prueba',
+    message: 'Are you sure you want to run this test?',
+    header: 'Test Confirmation',
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Sí, continuar',
-    rejectLabel: 'Cancelar',
+    acceptLabel: 'Yes, continue',
+    rejectLabel: 'Cancel',
     accept: () => {
-      toast.add({ severity: 'info', summary: 'Confirmado', detail: 'Has aceptado la acción.', life: 3000 })
+      toast.add({ severity: 'info', summary: 'Confirmed', detail: 'You accepted the action.', life: 3000 })
     }
   })
 }
@@ -86,15 +86,15 @@ const isCategoryVisible = (cat: string) => {
 <template>
   <div class="guide-container">
     <header class="guide-header">
-      <h1>Guía de Componentes PrimeVue 4</h1>
+      <h1>PrimeVue 4 Component Guide</h1>
       <p class="subtitle">
-        Catalogo interactivo de componentes disponibles en PrimeVue para acelerar el desarrollo del proyecto.
+        Interactive catalog of the PrimeVue components available to speed up project development.
       </p>
 
       <div class="controls-bar">
         <IconField iconPosition="left" class="search-field">
           <InputIcon class="pi pi-search" />
-          <InputText v-model="searchQuery" placeholder="Buscar componente..." class="w-full" />
+          <InputText v-model="searchQuery" placeholder="Search component..." class="w-full" />
         </IconField>
 
         <div class="category-pills">
@@ -115,9 +115,9 @@ const isCategoryVisible = (cat: string) => {
     <section v-if="isCategoryVisible('forms')" class="component-section">
       <div class="section-title">
         <i class="pi pi-file-edit text-primary"></i>
-        <h2>1. Formularios y Entradas (Form Inputs)</h2>
+        <h2>1. Form Inputs</h2>
         <Button
-          :label="activeCodeTab['forms'] ? 'Ocultar Código' : 'Ver Código Vue'"
+          :label="activeCodeTab['forms'] ? 'Hide Code' : 'View Vue Code'"
           icon="pi pi-code"
           variant="text"
           severity="secondary"
@@ -132,8 +132,8 @@ const isCategoryVisible = (cat: string) => {
           <div class="form-grid">
             <div class="field">
               <label>InputText</label>
-              <InputText v-model="textVal" placeholder="Escribe algo..." />
-              <small>Valor: {{ textVal }}</small>
+              <InputText v-model="textVal" placeholder="Type something..." />
+              <small>Value: {{ textVal }}</small>
             </div>
 
             <div class="field">
@@ -143,22 +143,22 @@ const isCategoryVisible = (cat: string) => {
 
             <div class="field">
               <label>Password</label>
-              <Password v-model="passwordVal" toggleMask placeholder="Contraseña" />
+              <Password v-model="passwordVal" toggleMask placeholder="Password" />
             </div>
 
             <div class="field">
               <label>Select (Dropdown)</label>
-              <Select v-model="selectedCity" :options="cities" optionLabel="name" placeholder="Selecciona ciudad" />
+              <Select v-model="selectedCity" :options="cities" optionLabel="name" placeholder="Select a city" />
             </div>
 
             <div class="field flex-row">
               <ToggleSwitch v-model="switchVal" id="sw" />
-              <label for="sw">ToggleSwitch (Activado)</label>
+              <label for="sw">ToggleSwitch (On)</label>
             </div>
 
             <div class="field flex-row">
               <Checkbox v-model="checkboxVal" :binary="true" id="chk" />
-              <label for="chk">Checkbox Seleccionado</label>
+              <label for="chk">Checkbox (Checked)</label>
             </div>
 
             <div class="field">
@@ -186,7 +186,7 @@ const ratingVal = ref(4)
 &lt;/script&gt;
 
 &lt;template&gt;
-  &lt;InputText v-model="textVal" placeholder="Texto..." /&gt;
+  &lt;InputText v-model="textVal" placeholder="Text..." /&gt;
   &lt;InputNumber v-model="numberVal" showButtons /&gt;
   &lt;Password v-model="passwordVal" toggleMask /&gt;
   &lt;Select v-model="selectedCity" :options="cities" optionLabel="name" /&gt;
@@ -201,9 +201,9 @@ const ratingVal = ref(4)
     <section v-if="isCategoryVisible('buttons')" class="component-section">
       <div class="section-title">
         <i class="pi pi-send text-primary"></i>
-        <h2>2. Botones y Variantes (Buttons)</h2>
+        <h2>2. Buttons & Variants</h2>
         <Button
-          :label="activeCodeTab['buttons'] ? 'Ocultar Código' : 'Ver Código Vue'"
+          :label="activeCodeTab['buttons'] ? 'Hide Code' : 'View Vue Code'"
           icon="pi pi-code"
           variant="text"
           severity="secondary"
@@ -216,7 +216,7 @@ const ratingVal = ref(4)
       <Card>
         <template #content>
           <div class="buttons-demo">
-            <h4>Severidades (Severities)</h4>
+            <h4>Severities</h4>
             <div class="button-row">
               <Button label="Primary" />
               <Button label="Secondary" severity="secondary" />
@@ -227,14 +227,14 @@ const ratingVal = ref(4)
               <Button label="Danger" severity="danger" icon="pi pi-times" />
             </div>
 
-            <h4 class="mt-4">Estilos de Variante (Variants & Options)</h4>
+            <h4 class="mt-4">Variant Styles (Variants & Options)</h4>
             <div class="button-row">
               <Button label="Outlined" variant="outlined" />
               <Button label="Text" variant="text" />
               <Button label="Rounded" rounded />
               <Button icon="pi pi-heart" rounded severity="danger" aria-label="Favorite" />
               <Button label="Badge" icon="pi pi-bell" badge="3" severity="info" />
-              <Button label="Cargando" loading />
+              <Button label="Loading" loading />
             </div>
           </div>
 
@@ -247,7 +247,7 @@ const ratingVal = ref(4)
 &lt;Button label="Text" variant="text" /&gt;
 &lt;Button label="Rounded" rounded /&gt;
 &lt;Button icon="pi pi-heart" rounded severity="danger" /&gt;
-&lt;Button label="Notificaciones" icon="pi pi-bell" badge="5" severity="info" /&gt;</code></pre>
+&lt;Button label="Notifications" icon="pi pi-bell" badge="5" severity="info" /&gt;</code></pre>
           </div>
         </template>
       </Card>
@@ -256,9 +256,9 @@ const ratingVal = ref(4)
     <section v-if="isCategoryVisible('data')" class="component-section">
       <div class="section-title">
         <i class="pi pi-table text-primary"></i>
-        <h2>3. Tablas y Visualización de Datos (Data & Lists)</h2>
+        <h2>3. Tables & Data Display</h2>
         <Button
-          :label="activeCodeTab['data'] ? 'Ocultar Código' : 'Ver Código Vue'"
+          :label="activeCodeTab['data'] ? 'Hide Code' : 'View Vue Code'"
           icon="pi pi-code"
           variant="text"
           severity="secondary"
@@ -272,23 +272,23 @@ const ratingVal = ref(4)
         <template #content>
           <DataTable :value="tableData" stripedRows paginator :rows="3" responsiveLayout="scroll">
             <Column field="id" header="ID" sortable></Column>
-            <Column field="name" header="Nombre / Asiento" sortable></Column>
-            <Column field="section" header="Sección"></Column>
-            <Column field="status" header="Estado">
+            <Column field="name" header="Name / Seat" sortable></Column>
+            <Column field="section" header="Section"></Column>
+            <Column field="status" header="Status">
               <template #body="slotProps">
                 <Tag :value="slotProps.data.status" :severity="getStatusSeverity(slotProps.data.status)" />
               </template>
             </Column>
-            <Column field="price" header="Precio"></Column>
+            <Column field="price" header="Price"></Column>
           </DataTable>
 
           <div class="tags-chips-demo mt-4">
             <h4>Tags, Badges & Chips</h4>
             <div class="button-row">
-              <Tag value="Disponible" severity="success" />
-              <Tag value="Reservado" severity="warn" />
+              <Tag value="Available" severity="success" />
+              <Tag value="Reserved" severity="warn" />
               <Badge value="12" severity="info" />
-              <Chip label="Asiento VIP" icon="pi pi-star-fill" />
+              <Chip label="VIP Seat" icon="pi pi-star-fill" />
             </div>
           </div>
 
@@ -297,16 +297,16 @@ const ratingVal = ref(4)
 import { ref } from 'vue'
 
 const items = ref([
-  { id: 1, name: 'Asiento 101', section: 'Zona Norte', status: 'Disponible' },
-  { id: 2, name: 'Asiento 102', section: 'Zona Norte', status: 'Ocupado' }
+  { id: 1, name: 'Seat 101', section: 'North Zone', status: 'Available' },
+  { id: 2, name: 'Seat 102', section: 'North Zone', status: 'Occupied' }
 ])
 &lt;/script&gt;
 
 &lt;template&gt;
   &lt;DataTable :value="items" stripedRows paginator :rows="5"&gt;
     &lt;Column field="id" header="ID" sortable /&gt;
-    &lt;Column field="name" header="Nombre" /&gt;
-    &lt;Column field="status" header="Estado"&gt;
+    &lt;Column field="name" header="Name" /&gt;
+    &lt;Column field="status" header="Status"&gt;
       &lt;template #body="slotProps"&gt;
         &lt;Tag :value="slotProps.data.status" severity="success" /&gt;
       &lt;/template&gt;
@@ -321,9 +321,9 @@ const items = ref([
     <section v-if="isCategoryVisible('panels')" class="component-section">
       <div class="section-title">
         <i class="pi pi-box text-primary"></i>
-        <h2>4. Paneles y Contenedores (Panels & Containers)</h2>
+        <h2>4. Panels & Containers</h2>
         <Button
-          :label="activeCodeTab['panels'] ? 'Ocultar Código' : 'Ver Código Vue'"
+          :label="activeCodeTab['panels'] ? 'Hide Code' : 'View Vue Code'"
           icon="pi pi-code"
           variant="text"
           severity="secondary"
@@ -334,26 +334,26 @@ const items = ref([
       </div>
 
       <div class="panels-grid">
-        <Panel header="Panel Colapsable" toggleable>
+        <Panel header="Collapsible Panel" toggleable>
           <p class="m-0">
-            Este es un componente Panel de PrimeVue con soporte para colapsar y expandir.
+            This is a PrimeVue Panel component with support for collapsing and expanding.
           </p>
         </Panel>
 
         <Accordion value="0">
           <AccordionPanel value="0">
-            <AccordionHeader>Pregunta Frecuente #1</AccordionHeader>
+            <AccordionHeader>FAQ #1</AccordionHeader>
             <AccordionContent>
               <p class="m-0">
-                Los componentes de PrimeVue v4 están totalmente adaptados para la API de Composition de Vue 3.
+                PrimeVue v4 components are fully adapted to Vue 3's Composition API.
               </p>
             </AccordionContent>
           </AccordionPanel>
           <AccordionPanel value="1">
-            <AccordionHeader>Pregunta Frecuente #2</AccordionHeader>
+            <AccordionHeader>FAQ #2</AccordionHeader>
             <AccordionContent>
               <p class="m-0">
-                Puedes cambiar el tema en tiempo de ejecución o personalizar Design Tokens.
+                You can change the theme at runtime or customize Design Tokens.
               </p>
             </AccordionContent>
           </AccordionPanel>
@@ -363,14 +363,14 @@ const items = ref([
       <Card v-if="activeCodeTab['panels']" class="mt-3">
         <template #content>
           <div class="code-block">
-            <pre><code>&lt;Panel header="Mi Panel" toggleable&gt;
-  &lt;p&gt;Contenido del panel...&lt;/p&gt;
+            <pre><code>&lt;Panel header="My Panel" toggleable&gt;
+  &lt;p&gt;Panel content...&lt;/p&gt;
 &lt;/Panel&gt;
 
 &lt;Accordion value="0"&gt;
   &lt;AccordionPanel value="0"&gt;
-    &lt;AccordionHeader&gt;Título 1&lt;/AccordionHeader&gt;
-    &lt;AccordionContent&gt;Contenido 1&lt;/AccordionContent&gt;
+    &lt;AccordionHeader&gt;Title 1&lt;/AccordionHeader&gt;
+    &lt;AccordionContent&gt;Content 1&lt;/AccordionContent&gt;
   &lt;/AccordionPanel&gt;
 &lt;/Accordion&gt;</code></pre>
           </div>
@@ -381,9 +381,9 @@ const items = ref([
     <section v-if="isCategoryVisible('feedback')" class="component-section">
       <div class="section-title">
         <i class="pi pi-bell text-primary"></i>
-        <h2>5. Mensajes, Diálogos y Notificaciones (Overlays & Feedback)</h2>
+        <h2>5. Messages, Dialogs & Notifications</h2>
         <Button
-          :label="activeCodeTab['feedback'] ? 'Ocultar Código' : 'Ver Código Vue'"
+          :label="activeCodeTab['feedback'] ? 'Hide Code' : 'View Vue Code'"
           icon="pi pi-code"
           variant="text"
           severity="secondary"
@@ -396,29 +396,29 @@ const items = ref([
       <Card>
         <template #content>
           <div class="feedback-demo">
-            <h4>Mensajes de Alerta</h4>
+            <h4>Alert Messages</h4>
             <div class="messages-list mb-4">
-              <Message severity="success">Operación realizada exitosamente en el sistema.</Message>
-              <Message severity="info">Información importante sobre tu cuenta.</Message>
-              <Message severity="warn">Advertencia: Revisa los parámetros ingresados.</Message>
+              <Message severity="success">Operation completed successfully.</Message>
+              <Message severity="info">Important information about your account.</Message>
+              <Message severity="warn">Warning: Review the entered parameters.</Message>
             </div>
 
-            <h4>Barra de Progreso</h4>
+            <h4>Progress Bar</h4>
             <ProgressBar :value="progressVal" class="mb-4" />
 
-            <h4>Servicios Emergentes (Toast, Confirm, Dialog)</h4>
+            <h4>Overlay Services (Toast, Confirm, Dialog)</h4>
             <div class="button-row">
-              <Button label="Probar Toast" icon="pi pi-bell" severity="success" @click="showToastSuccess" />
-              <Button label="Probar ConfirmDialog" icon="pi pi-exclamation-circle" severity="warn" @click="showConfirm" />
-              <Button label="Abrir Dialog Modal" icon="pi pi-window-maximize" severity="info" @click="isDialogVisible = true" />
+              <Button label="Trigger Toast" icon="pi pi-bell" severity="success" @click="showToastSuccess" />
+              <Button label="Trigger ConfirmDialog" icon="pi pi-exclamation-circle" severity="warn" @click="showConfirm" />
+              <Button label="Open Dialog Modal" icon="pi pi-window-maximize" severity="info" @click="isDialogVisible = true" />
             </div>
 
-            <Dialog v-model:visible="isDialogVisible" modal header="Diálogo de Prueba" :style="{ width: '30rem' }">
+            <Dialog v-model:visible="isDialogVisible" modal header="Test Dialog" :style="{ width: '30rem' }">
               <p class="m-0">
-                Este es un modal emergente interactivo utilizando el componente <code>&lt;Dialog /&gt;</code> de PrimeVue.
+                This is an interactive popup modal using PrimeVue's <code>&lt;Dialog /&gt;</code> component.
               </p>
               <template #footer>
-                <Button label="Cerrar" icon="pi pi-check" @click="isDialogVisible = false" />
+                <Button label="Close" icon="pi pi-check" @click="isDialogVisible = false" />
               </template>
             </Dialog>
           </div>
@@ -434,19 +434,19 @@ const confirm = useConfirm()
 const isDialogVisible = ref(false)
 
 const triggerToast = () => {
-  toast.add({ severity: 'success', summary: 'Éxito', detail: 'Mensaje enviado', life: 3000 })
+  toast.add({ severity: 'success', summary: 'Success', detail: 'Message sent', life: 3000 })
 }
 &lt;/script&gt;
 
 &lt;template&gt;
   &lt;Toast /&gt;
   &lt;ConfirmDialog /&gt;
-  
+
   &lt;Button label="Toast" @click="triggerToast" /&gt;
   &lt;Button label="Modal" @click="isDialogVisible = true" /&gt;
 
-  &lt;Dialog v-model:visible="isDialogVisible" modal header="Título"&gt;
-    &lt;p&gt;Contenido del modal...&lt;/p&gt;
+  &lt;Dialog v-model:visible="isDialogVisible" modal header="Title"&gt;
+    &lt;p&gt;Modal content...&lt;/p&gt;
   &lt;/Dialog&gt;
 &lt;/template&gt;</code></pre>
           </div>

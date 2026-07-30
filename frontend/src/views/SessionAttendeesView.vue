@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getSessionById, getSessionAttendeeStatuses } from '../services/sessions'
 import { getWorkshopById } from '../services/workshops'
+import { getErrorMessage } from '../services/api'
 import type { Session } from '../types/session'
 import type { Workshop } from '../types/workshop'
 
@@ -13,20 +14,28 @@ const session = ref<Session | undefined>()
 const workshop = ref<Workshop | undefined>()
 const attendees = ref<Array<{ name: string; email: string; status: string }>>([])
 const loading = ref(true)
+const loadError = ref<string | null>(null)
 
 onMounted(async () => {
-  session.value = await getSessionById(sessionId)
-  if (session.value) {
-    workshop.value = await getWorkshopById(session.value.workshopId)
-    attendees.value = await getSessionAttendeeStatuses(sessionId)
+  try {
+    session.value = await getSessionById(sessionId)
+    if (session.value) {
+      workshop.value = await getWorkshopById(session.value.workshopId)
+      attendees.value = await getSessionAttendeeStatuses(sessionId)
+    }
+  } catch (error) {
+    loadError.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 })
 </script>
 
 <template>
   <div class="page">
     <div v-if="loading">Loading attendees...</div>
+    <Message v-else-if="loadError" severity="error">{{ loadError }}</Message>
+    <div v-else-if="!session">Session not found.</div>
     <div v-else>
       <div class="actions-row">
         <Button
@@ -34,7 +43,7 @@ onMounted(async () => {
           severity="primary"
           variant="outlined"
           class="action-button"
-          @click="router.push(`/admin/workshops/${workshop?.id}/sessions`)"
+          @click="router.push({ name: 'admin-workshop-sessions', params: { workshopId: workshop?.id } })"
         />
       </div>
       <h1>Attendees for {{ workshop?.title }}</h1>

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { getRegistrationHistoryByEmail } from '../services/registrations'
+import { getErrorMessage } from '../services/api'
 import type { Registration } from '../types/registration'
 
 const toast = useToast()
@@ -26,8 +27,7 @@ async function loadHistory() {
     history.value = result
     toast.add({ severity: 'success', summary: 'Registrations loaded', detail: `Found ${result.registrations.length} registration(s).`, life: 3000 })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-    toast.add({ severity: 'error', summary: 'Load failed', detail: message, life: 4000 })
+    toast.add({ severity: 'error', summary: 'Load failed', detail: getErrorMessage(error), life: 4000 })
   }
 }
 </script>

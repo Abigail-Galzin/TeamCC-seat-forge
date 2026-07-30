@@ -12,29 +12,34 @@ const toggleDarkMode = () => {
 
 const items = ref([
   {
-    label: 'Inicio',
+    label: 'Home',
     icon: 'pi pi-home',
-    command: () => router.push('/')
+    command: () => router.push({ name: 'dashboard' })
   },
   {
     label: 'Workshops',
     icon: 'pi pi-calendar',
-    command: () => router.push('/workshops')
+    command: () => router.push({ name: 'attendee-catalog' })
+  },
+  {
+    label: 'Sessions',
+    icon: 'pi pi-list',
+    command: () => router.push({ name: 'sessions-browse' })
   },
   {
     label: 'Admin Workshops',
     icon: 'pi pi-briefcase',
-    command: () => router.push('/admin/workshops')
+    command: () => router.push({ name: 'admin-workshops' })
   },
   {
     label: 'My registrations',
     icon: 'pi pi-user',
-    command: () => router.push('/attendee-history')
+    command: () => router.push({ name: 'attendee-history' })
   },
   {
-    label: 'Catálogo de Componentes',
+    label: 'Component Catalog',
     icon: 'pi pi-th-large',
-    command: () => router.push('/components')
+    command: () => router.push({ name: 'components-guide' })
   }
 ])
 </script>
@@ -47,7 +52,7 @@ const items = ref([
     <header class="app-header">
       <Menubar :model="items" class="custom-menubar">
         <template #start>
-          <div class="brand" @click="router.push('/')">
+          <div class="brand" @click="router.push({ name: 'dashboard' })">
             <i class="pi pi-box brand-icon"></i>
             <span class="brand-name">SeatForge</span>
           </div>
@@ -56,7 +61,7 @@ const items = ref([
           <div class="nav-end">
             <Button
               :icon="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"
-              :label="isDarkMode ? 'Modo Claro' : 'Modo Oscuro'"
+              :label="isDarkMode ? 'Light Mode' : 'Dark Mode'"
               severity="secondary"
               variant="text"
               size="small"
@@ -72,7 +77,7 @@ const items = ref([
     </main>
 
     <footer class="app-footer">
-      <p>SeatForge &copy; 2026 - Configurado con Vue 3 & PrimeVue 4</p>
+      <p>SeatForge &copy; 2026 - Built with Vue 3 & PrimeVue 4</p>
     </footer>
   </div>
 </template>

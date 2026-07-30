@@ -1,5 +1,5 @@
 import { apiClient } from './api'
-import { workshopStore, sessionStore, nextWorkshopId } from './mock-store'
+import { workshopStore, sessionStore, nextWorkshopId, paginateMock } from './mock-store'
 import type { Workshop, CreateWorkshopPayload } from '../types/workshop'
 import type { PaginatedResult } from '../types/pagination'
 
@@ -14,16 +14,7 @@ export async function getWorkshops(
         (workshop) => workshop.active && sessionStore.some((session) => session.workshopId === workshop.id),
       )
     : workshopStore
-  const total = filtered.length
-  const start = (page - 1) * perPage
-  const items = filtered.slice(start, start + perPage)
-  return {
-    items,
-    total,
-    page,
-    perPage,
-    totalPages: Math.max(1, Math.ceil(total / perPage)),
-  }
+  return paginateMock(filtered, page, perPage)
 }
 
 export async function createWorkshop(payload: CreateWorkshopPayload): Promise<Workshop> {
@@ -55,4 +46,9 @@ export async function updateWorkshop(id: number, payload: CreateWorkshopPayload)
 export async function getWorkshopsFromApi(): Promise<Workshop[]> {
   const response = await apiClient.get<Workshop[]>('/workshops')
   return response.data
+}
+
+export async function getWorkshopTopics(): Promise<string[]> {
+  await Promise.resolve()
+  return Array.from(new Set(workshopStore.map((workshop) => workshop.topic))).sort()
 }

@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast'
 import { getSessionsForWorkshop } from '../services/sessions'
 import { getWorkshopById } from '../services/workshops'
 import { createRegistration } from '../services/registrations'
+import { getErrorMessage } from '../services/api'
 import type { Session } from '../types/session'
 import type { Workshop } from '../types/workshop'
 
@@ -15,6 +16,7 @@ const workshopId = Number(route.params.workshopId)
 const workshop = ref<Workshop | undefined>()
 const sessions = ref<Session[]>([])
 const loading = ref(true)
+const loadError = ref<string | null>(null)
 const attendeeName = ref('')
 const attendeeEmail = ref('')
 const selectedSessionId = ref<number | null>(null)
@@ -28,10 +30,15 @@ const sessionOptions = computed(() =>
 )
 
 onMounted(async () => {
-  workshop.value = await getWorkshopById(workshopId)
-  const pageResult = await getSessionsForWorkshop(workshopId)
-  sessions.value = pageResult.items
-  loading.value = false
+  try {
+    workshop.value = await getWorkshopById(workshopId)
+    const pageResult = await getSessionsForWorkshop(workshopId)
+    sessions.value = pageResult.data
+  } catch (error) {
+    loadError.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
 })
 
 async function reserveSeat() {
@@ -56,8 +63,7 @@ async function reserveSeat() {
     })
     router.push({ name: 'attendee-catalog' })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-    toast.add({ severity: 'error', summary: 'Reservation failed', detail: message, life: 4000 })
+    toast.add({ severity: 'error', summary: 'Reservation failed', detail: getErrorMessage(error), life: 4000 })
   } finally {
     submitting.value = false
   }
@@ -67,6 +73,7 @@ async function reserveSeat() {
 <template>
   <div class="page">
     <div v-if="loading">Loading session details...</div>
+    <Message v-else-if="loadError" severity="error">{{ loadError }}</Message>
     <div v-else>
       <h1>{{ workshop?.title }}</h1>
       <p>{{ workshop?.description }}</p>

@@ -27,25 +27,27 @@ describe('getWorkshops', () => {
   it('returns only active workshops that have at least one session by default', async () => {
     const result = await workshops.getWorkshops()
 
-    expect(result.items.map((w) => w.id)).toEqual([1, 2])
-    expect(result.total).toBe(2)
-    expect(result.totalPages).toBe(1)
+    expect(result.data.map((w) => w.id)).toEqual([1, 2])
+    expect(result.pagination.count).toBe(2)
+    expect(result.pagination.pages).toBe(1)
   })
 
   it('includes inactive workshops when activeOnly is false', async () => {
     const result = await workshops.getWorkshops(1, 5, false)
 
-    expect(result.items).toHaveLength(3)
-    expect(result.total).toBe(3)
+    expect(result.data).toHaveLength(3)
+    expect(result.pagination.count).toBe(3)
   })
 
   it('paginates results', async () => {
     const result = await workshops.getWorkshops(2, 1, false)
 
-    expect(result.items).toHaveLength(1)
-    expect(result.page).toBe(2)
-    expect(result.perPage).toBe(1)
-    expect(result.totalPages).toBe(3)
+    expect(result.data).toHaveLength(1)
+    expect(result.pagination.page).toBe(2)
+    expect(result.pagination.limit).toBe(1)
+    expect(result.pagination.pages).toBe(3)
+    expect(result.pagination.next).toBe(3)
+    expect(result.pagination.prev).toBe(1)
   })
 })
 
@@ -66,7 +68,7 @@ describe('createWorkshop', () => {
     expect(workshop.id).toEqual(expect.any(Number))
 
     const all = await workshops.getWorkshops(1, 10, false)
-    expect(all.items[0]).toEqual(workshop)
+    expect(all.data[0]).toEqual(workshop)
   })
 })
 
@@ -114,15 +116,15 @@ describe('getSessionsForWorkshop', () => {
   it('returns sessions for the given workshop', async () => {
     const result = await sessions.getSessionsForWorkshop(1)
 
-    expect(result.items).toHaveLength(2)
-    expect(result.items.every((s) => s.workshopId === 1)).toBe(true)
+    expect(result.data).toHaveLength(2)
+    expect(result.data.every((s) => s.workshopId === 1)).toBe(true)
   })
 
   it('paginates sessions', async () => {
     const result = await sessions.getSessionsForWorkshop(1, 1, 1)
 
-    expect(result.items).toHaveLength(1)
-    expect(result.totalPages).toBe(2)
+    expect(result.data).toHaveLength(1)
+    expect(result.pagination.pages).toBe(2)
   })
 })
 

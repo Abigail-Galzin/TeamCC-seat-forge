@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { getWorkshopById, updateWorkshop } from '../services/workshops'
+import { getErrorMessage } from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,6 +11,7 @@ const toast = useToast()
 const workshopId = Number(route.params.workshopId)
 const loading = ref(true)
 const notFound = ref(false)
+const loadError = ref<string | null>(null)
 const submitting = ref(false)
 const form = reactive({
   title: '',
@@ -19,18 +21,22 @@ const form = reactive({
 })
 
 onMounted(async () => {
-  const workshop = await getWorkshopById(workshopId)
-  if (!workshop) {
-    notFound.value = true
-    loading.value = false
-    return
-  }
+  try {
+    const workshop = await getWorkshopById(workshopId)
+    if (!workshop) {
+      notFound.value = true
+      return
+    }
 
-  form.title = workshop.title
-  form.description = workshop.description
-  form.topic = workshop.topic
-  form.active = workshop.active
-  loading.value = false
+    form.title = workshop.title
+    form.description = workshop.description
+    form.topic = workshop.topic
+    form.active = workshop.active
+  } catch (error) {
+    loadError.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
 })
 
 async function submit() {
@@ -38,10 +44,9 @@ async function submit() {
   try {
     await updateWorkshop(workshopId, { ...form })
     toast.add({ severity: 'success', summary: 'Workshop updated', detail: 'The workshop was saved successfully.', life: 3000 })
-    router.push('/admin/workshops')
+    router.push({ name: 'admin-workshops' })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-    toast.add({ severity: 'error', summary: 'Save failed', detail: message, life: 4000 })
+    toast.add({ severity: 'error', summary: 'Save failed', detail: getErrorMessage(error), life: 4000 })
   } finally {
     submitting.value = false
   }
@@ -60,11 +65,12 @@ async function submit() {
         icon="pi pi-angle-left"
         severity="primary"
         variant="outlined"
-        @click="router.push('/admin/workshops')"
+        @click="router.push({ name: 'admin-workshops' })"
       />
     </div>
 
     <div v-if="loading" class="state">Loading workshop...</div>
+    <Message v-else-if="loadError" severity="error">{{ loadError }}</Message>
     <div v-else-if="notFound" class="state">Workshop not found.</div>
     <form v-else class="card" @submit.prevent="submit">
       <label>

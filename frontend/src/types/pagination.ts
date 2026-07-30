@@ -1,7 +1,15 @@
-export interface PaginatedResult<T> {
-  items: T[]
-  total: number
+export interface PaginationInfo {
   page: number
-  perPage: number
-  totalPages: number
+  pages: number
+  count: number
+  limit: number
+  next: number | null
+  prev: number | null
+}
+
+export interface PaginatedResult<T> {
+  message: string | null
+  data: T[]
+  status: string
+  pagination: PaginationInfo
 }

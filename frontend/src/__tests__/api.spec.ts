@@ -24,7 +24,7 @@ describe('checkBackendHealth', () => {
 
     expect(result.ok).toBe(true)
     expect(result.statusCode).toBe(200)
-    expect(result.statusText).toContain('Conectado')
+    expect(result.statusText).toContain('connected')
     expect(result.url).toBe('/api/v1/up')
   })
 
@@ -51,6 +51,6 @@ describe('checkBackendHealth', () => {
 
     expect(result.ok).toBe(false)
     expect(result.statusCode).toBeUndefined()
-    expect(result.statusText).toContain('fuera de línea')
+    expect(result.statusText).toContain('offline')
   })
 })
