@@ -17,6 +17,21 @@ const items = ref([
     command: () => router.push('/')
   },
   {
+    label: 'Workshops',
+    icon: 'pi pi-calendar',
+    command: () => router.push('/workshops')
+  },
+  {
+    label: 'Admin Workshops',
+    icon: 'pi pi-briefcase',
+    command: () => router.push('/admin/workshops')
+  },
+  {
+    label: 'My registrations',
+    icon: 'pi pi-user',
+    command: () => router.push('/attendee-history')
+  },
+  {
     label: 'Catálogo de Componentes',
     icon: 'pi pi-th-large',
     command: () => router.push('/components')

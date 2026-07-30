@@ -1,0 +1,83 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { getWorkshopById, getSessionsForWorkshop, type Session, type Workshop } from '../services/workshops'
+
+const route = useRoute()
+const router = useRouter()
+const workshopId = Number(route.params.workshopId)
+const workshop = ref<Workshop | undefined>()
+const sessions = ref<Session[]>([])
+const loading = ref(true)
+
+onMounted(async () => {
+  workshop.value = await getWorkshopById(workshopId)
+  const pageResult = await getSessionsForWorkshop(workshopId)
+  sessions.value = pageResult.items
+  loading.value = false
+})
+</script>
+
+<template>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <p class="eyebrow">Admin</p>
+        <h1>Sessions for {{ workshop?.title }}</h1>
+      </div>
+      <div class="header-actions">
+        <Button
+          label="Back"
+          severity="primary"
+          variant="outlined"
+          @click="router.push('/admin/workshops')"
+        />
+        <Button
+          label="Add"
+          severity="primary"
+          @click="router.push(`/admin/workshops/${workshopId}/sessions/new`)"
+        />
+      </div>
+    </div>
+
+    <div class="sessions-table-wrapper">
+      <DataTable
+        :value="sessions"
+        :loading="loading"
+        responsiveLayout="scroll"
+        emptyMessage="No sessions created for this workshop."
+      >
+        <Column header="Starts at">
+          <template #body="{ data }">{{ new Date(data.startsAt).toLocaleString() }}</template>
+        </Column>
+        <Column field="capacity" header="Capacity" sortable />
+        <Column header="Status">
+          <template #body="{ data }">
+            <Badge :value="data.status" :severity="data.status === 'scheduled' ? 'success' : 'secondary'" />
+          </template>
+        </Column>
+        <Column header="Actions">
+          <template #body="{ data }">
+            <div class="row-actions">
+              <Button
+                label="View attendees"
+                severity="primary"
+                size="small"
+                @click="router.push(`/admin/sessions/${data.id}/attendees`)"
+              />
+            </div>
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.page { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
+.page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; font-size: 0.8rem; margin-bottom: 0.25rem; }
+.header-actions { display: flex; gap: 0.75rem; align-items: center; }
+.sessions-table-wrapper { overflow-x: auto; }
+.row-actions { display: inline-flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
+</style>

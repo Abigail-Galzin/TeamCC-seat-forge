@@ -1,0 +1,104 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
+import { getSessionsForWorkshop, getWorkshopById, createRegistration, type Session, type Workshop } from '../services/workshops'
+
+const route = useRoute()
+const router = useRouter()
+const toast = useToast()
+const workshopId = Number(route.params.workshopId)
+const workshop = ref<Workshop | undefined>()
+const sessions = ref<Session[]>([])
+const loading = ref(true)
+const attendeeName = ref('')
+const attendeeEmail = ref('')
+const selectedSessionId = ref<number | null>(null)
+const submitting = ref(false)
+
+const sessionOptions = computed(() =>
+  sessions.value.map((session) => ({
+    label: `${new Date(session.startsAt).toLocaleString()} · Capacity ${session.capacity}`,
+    value: session.id,
+  })),
+)
+
+onMounted(async () => {
+  workshop.value = await getWorkshopById(workshopId)
+  const pageResult = await getSessionsForWorkshop(workshopId)
+  sessions.value = pageResult.items
+  loading.value = false
+})
+
+async function reserveSeat() {
+  if (!selectedSessionId.value) {
+    toast.add({ severity: 'warn', summary: 'Missing session', detail: 'Please choose a session.', life: 3000 })
+    return
+  }
+
+  submitting.value = true
+  try {
+    const registration = await createRegistration({
+      attendeeName: attendeeName.value,
+      attendeeEmail: attendeeEmail.value,
+      sessionId: selectedSessionId.value,
+    })
+
+    toast.add({
+      severity: 'success',
+      summary: 'Reservation confirmed',
+      detail: `Reservation created with status: ${registration.status}`,
+      life: 3000,
+    })
+    router.push({ name: 'attendee-catalog' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    toast.add({ severity: 'error', summary: 'Reservation failed', detail: message, life: 4000 })
+  } finally {
+    submitting.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="page">
+    <div v-if="loading">Loading session details...</div>
+    <div v-else>
+      <h1>{{ workshop?.title }}</h1>
+      <p>{{ workshop?.description }}</p>
+
+      <form class="card" @submit.prevent="reserveSeat">
+        <h2>Reserve a seat</h2>
+        <label>
+          <span>Name</span>
+          <InputText v-model="attendeeName" required />
+        </label>
+        <label>
+          <span>Email</span>
+          <InputText v-model="attendeeEmail" type="email" required />
+        </label>
+
+        <label>
+          <span>Session</span>
+          <Select
+            v-model="selectedSessionId"
+            :options="sessionOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select a session"
+          />
+        </label>
+
+        <Button type="submit" :label="submitting ? 'Reserving...' : 'Reserve seat'" severity="primary" :disabled="submitting" class="form-submit" />
+      </form>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.page { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+.actions-row { display: flex; justify-content: flex-end; margin-bottom: 1rem; }
+.card { display: grid; gap: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; }
+label { display: grid; gap: 0.4rem; }
+.form-submit { justify-self: end; }
+</style>
