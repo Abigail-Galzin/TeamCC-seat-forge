@@ -9,9 +9,17 @@ Rails.application.routes.draw do
   # root "posts#index"
   namespace :api do
     namespace :v1 do
-      resources :workshops do
-        resources :sessions
+      resources :workshops, only: [ :index, :show, :create, :update ] do
+        resources :sessions, only: [ :index, :show, :create, :update ] do
+          resources :registrations, only: [ :index, :show, :create ] do
+            member do
+              post :confirm
+              post :cancel
+            end
+          end
+        end
       end
+      resources :attendees, only: [ :index, :show, :create ]
 
       resources :sessions, only: [:index, :show] do
         member do
