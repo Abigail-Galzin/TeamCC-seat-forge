@@ -9,7 +9,11 @@ Rails.application.routes.draw do
   # root "posts#index"
   namespace :api do
     namespace :v1 do
+      get "dashboard", to: "dashboard#index"
+
       resources :workshops, only: [ :index, :show, :create, :update ] do
+        resource :dashboard, only: [ :show ], controller: "dashboard"
+
         resources :sessions, only: [ :index, :show, :create, :update ] do
           resources :registrations, only: [ :index, :show, :create ] do
             member do

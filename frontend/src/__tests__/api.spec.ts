@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
-import { apiClient, checkBackendHealth, getErrorMessage } from '../services/api'
+import { apiClient, checkBackendHealth, getErrorMessage, API_BASE_URL } from '../services/api'
 
 describe('api client', () => {
-  it('uses the /api/v1 base URL', () => {
-    expect(apiClient.defaults.baseURL).toBe('/api/v1')
+  it('uses the configured API base URL', () => {
+    expect(apiClient.defaults.baseURL).toBe(API_BASE_URL)
   })
 
   it('sends an Accept: application/json header', () => {
@@ -25,7 +25,7 @@ describe('checkBackendHealth', () => {
     expect(result.ok).toBe(true)
     expect(result.statusCode).toBe(200)
     expect(result.statusText).toContain('connected')
-    expect(result.url).toBe('/api/v1/up')
+    expect(result.url).toBe(`${API_BASE_URL}/up`)
   })
 
   it('returns ok:false with the HTTP status when the backend responds with an error', async () => {

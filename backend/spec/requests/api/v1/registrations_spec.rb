@@ -122,7 +122,9 @@ RSpec.describe "Api::V1::Registrations", type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       body = JSON.parse(response.body)
-      expect(body["error"]["code"]).to eq("creation_conflict")
+      expect(body["error"]["code"]).to eq("registration_conflict")
+      expect(body["error"]["message"]).to eq("The attendee already has an active registration for this session.")
+      expect(body["error"]["details"]).to eq([])
     end
 
     it "returns a not_found error when no attendee matches the given email" do
@@ -151,6 +153,113 @@ RSpec.describe "Api::V1::Registrations", type: :request do
 
       post "/api/v1/workshops/#{workshop.id}/sessions/999999/registrations",
         params: { attendee: { name: "A", email: "a@example.com" } }
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id" do
+    it "returns the registration" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+      registration = create(:registration, session: session, status: "held")
+
+      get "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/#{registration.id}"
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body["data"]).to include("id" => registration.id, "status" => "held")
+    end
+
+    it "returns a not_found error for an unknown registration" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+
+      get "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/999999"
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id/confirm" do
+    it "confirms a held registration" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+      registration = create(:registration, session: session, status: "held", hold_expires_at: 5.minutes.from_now)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/#{registration.id}/confirm"
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body["data"]["status"]).to eq("confirmed")
+      expect(body["data"]["hold_expires_at"]).to be_nil
+    end
+
+    it "returns a conflict error when the registration cannot be confirmed" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+      registration = create(:registration, session: session, status: "waitlisted", hold_expires_at: nil)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/#{registration.id}/confirm"
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      body = JSON.parse(response.body)
+      expect(body["error"]["code"]).to eq("confirmation_conflict")
+      expect(registration.reload.status).to eq("waitlisted")
+    end
+
+    it "returns a not_found error for an unknown registration" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/999999/confirm"
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id/cancel" do
+    it "cancels a held registration" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+      registration = create(:registration, session: session, status: "held")
+
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/#{registration.id}/cancel"
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body["data"]["status"]).to eq("cancelled")
+    end
+
+    it "promotes the oldest waitlisted registration when a held seat is released" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 1)
+      held = create(:registration, session: session, status: "held")
+      waitlisted = create(:registration, session: session, status: "waitlisted", created_at: 1.hour.ago)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/#{held.id}/cancel"
+
+      expect(response).to have_http_status(:ok)
+      expect(waitlisted.reload.status).to eq("held")
+    end
+
+    it "returns a conflict error when the registration cannot be cancelled" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+      registration = create(:registration, session: session, status: "expired", hold_expires_at: nil)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/#{registration.id}/cancel"
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      body = JSON.parse(response.body)
+      expect(body["error"]["code"]).to eq("cancellation_conflict")
+    end
+
+    it "returns a not_found error for an unknown registration" do
+      workshop = create(:workshop)
+      session = create(:session, workshop: workshop, capacity: 5)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations/999999/cancel"
 
       expect(response).to have_http_status(:not_found)
     end

@@ -44,6 +44,15 @@ class Api::V1::RegistrationsController < ApplicationController
         status: :created
       )
       render json: resp.as_json, status: resp.status
+    elsif @registration.errors.added?(:base, Registration::DUPLICATE_ACTIVE_REGISTRATION_MESSAGE)
+      response = Response::ResponseError.new(
+        code: "registration_conflict",
+        message: I18n.t('errors.registration_conflict'),
+        details: [],
+        status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
     else
       response = Response::ResponseError.new(
         code: "creation_conflict",
