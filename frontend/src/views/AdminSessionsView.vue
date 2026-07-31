@@ -56,7 +56,10 @@ async function confirmCancelSession() {
   try {
     const result = await cancelSession(sessionToCancel.value.id, cancellationReason.value)
     const session = sessions.value.find((s) => s.id === result.sessionId)
-    if (session) session.status = result.status
+    if (session) {
+      session.status = result.status
+      session.cancellationReason = result.cancellationReason
+    }
 
     const { held, confirmed, waitlisted } = result.cancelledRegistrations
     toast.add({
@@ -112,6 +115,9 @@ async function confirmCancelSession() {
         <Column header="Status">
           <template #body="{ data }">
             <Badge :value="data.status" :severity="data.status === 'scheduled' ? 'success' : 'secondary'" />
+            <p v-if="data.status === 'cancelled' && data.cancellationReason" class="cancellation-reason">
+              {{ data.cancellationReason }}
+            </p>
           </template>
         </Column>
         <Column header="Actions">
@@ -179,4 +185,5 @@ async function confirmCancelSession() {
 .cancel-dialog-label { display: block; margin-bottom: 0.4rem; font-weight: 600; }
 .cancel-dialog-textarea { width: 100%; }
 .cancel-dialog-error { margin-top: 0.75rem; }
+.cancellation-reason { margin: 0.35rem 0 0; color: #64748b; font-size: 0.85rem; max-width: 22rem; }
 </style>

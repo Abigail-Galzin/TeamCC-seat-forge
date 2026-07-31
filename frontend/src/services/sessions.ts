@@ -25,6 +25,7 @@ function toSession(record: SessionApiRecord): Session {
     endsAt: record.ends_at,
     capacity: record.capacity,
     status: record.status,
+    cancellationReason: record.cancellation_reason ?? undefined,
   }
 }
 

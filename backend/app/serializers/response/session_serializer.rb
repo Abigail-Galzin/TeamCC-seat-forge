@@ -16,7 +16,8 @@ class Response::SessionSerializer
       starts_at: @session.starts_at&.iso8601,
       ends_at: @session.ends_at&.iso8601,
       capacity: @session.capacity,
-      status: @session.status
+      status: @session.status,
+      cancellation_reason: @session.cancellation_reason
     }
 
     if @include_availability
