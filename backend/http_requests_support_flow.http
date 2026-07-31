@@ -1,0 +1,58 @@
+### Variables
+@baseUrl = http://localhost:3000/api/v1
+@contentType = application/json
+
+### Health check
+GET http://localhost:3000/up
+
+### 3. Create attendees
+# @name createAttendeeA
+POST {{baseUrl}}/attendees
+Content-Type: {{contentType}}
+
+{
+  "attendee": {
+    "name": "Alex Attendee",
+    "email": "alex@example.com"
+  }
+}
+
+### @name createAttendeeB
+POST {{baseUrl}}/attendees
+Content-Type: {{contentType}}
+
+{
+  "attendee": {
+    "name": "Blair Backup",
+    "email": "blair@example.com"
+  }
+}
+
+### List attendees
+GET {{baseUrl}}/attendees
+
+### Show an attendee
+GET {{baseUrl}}/attendees/1
+
+### Register attendee A for the session -> should be held
+# @name registerA
+POST {{baseUrl}}/workshops/1/sessions/10/registrations
+Content-Type: {{contentType}}
+
+{
+  "registration": {
+    "attendee_id": 7
+  }
+}
+
+### List registrations for the session
+GET {{baseUrl}}/workshops/1/sessions/9/registrations
+
+### Show a single registration
+GET {{baseUrl}}/workshops/1/sessions/9/registrations/7
+
+### Confirm attendee A's held registration -> sets confirmed_at, clears hold_expires_at, enqueues a notification job
+POST {{baseUrl}}/workshops/1/sessions/10/registrations/40/confirm
+
+### Cancel attendee A's confirmed registration -> releases the seat and promotes attendee B from waitlisted to held
+POST {{baseUrl}}/workshops/1/sessions/10/registrations/46/cancel

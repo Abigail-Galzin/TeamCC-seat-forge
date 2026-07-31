@@ -53,6 +53,11 @@ Rails.application.configure do
   # Highlight code that enqueued background job in logs.
   config.active_job.verbose_enqueue_logs = true
 
+  # Use Solid Queue so recurring tasks (config/recurring.yml) and job
+  # persistence behave the same as production. Run `bin/jobs` alongside
+  # the server to process them (Windows can't use the Puma plugin).
+  config.active_job.queue_adapter = :solid_queue
+
   # Highlight code that triggered redirect in logs.
   config.action_dispatch.verbose_redirect_logs = true
 
