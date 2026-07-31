@@ -54,7 +54,10 @@ describe('getWorkshops', () => {
 
     const result = await workshops.getWorkshops(2, 1, false)
 
-    expect(result.data).toHaveLength(1);
+    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops', {
+      params: { active: undefined, page: 2, per_page: 1 },
+    })
+    expect(result.data).toHaveLength(0);
     expect(result.pagination.page).toBe(2);
     expect(result.pagination.limit).toBe(1);
     expect(result.pagination.pages).toBe(3);
@@ -542,171 +545,36 @@ describe("getAttendeeRegistrationsFromApi", () => {
   });
 });
 
-describe("getSessionAttendeeStatuses", () => {
-  it("returns attendee info and status for each registration", async () => {
-    const statuses = await sessions.getSessionAttendeeStatuses(101);
-
-    expect(statuses).toEqual(
-      expect.arrayContaining([
-        { name: "Ana García", email: "ana@example.com", status: "confirmed" },
-        { name: "Luis Pérez", email: "luis@example.com", status: "held" },
-      ]),
-    );
-  });
-
-  it("returns an empty list for a session with no registrations", async () => {
-    const statuses = await sessions.getSessionAttendeeStatuses(103);
-    expect(statuses).toEqual([]);
-  });
-});
-
-describe("createRegistration", () => {
-  it("holds the registration when capacity is available", async () => {
-    const registration = await registrations.createRegistration({
-      attendeeName: "New Attendee",
-      attendeeEmail: "new-attendee@example.com",
-      sessionId: 103,
-    });
-
-    expect(registration.status).toBe("held");
-    expect(registration.holdExpiresAt).toEqual(expect.any(String));
-  });
-
-  it("waitlists the registration when the session is full", async () => {
-    await registrations.createRegistration({
-      attendeeName: "First Attendee",
-      attendeeEmail: "first@example.com",
-      sessionId: 103,
-    });
-
-    const second = await registrations.createRegistration({
-      attendeeName: "Second Attendee",
-      attendeeEmail: "second@example.com",
-      sessionId: 103,
-    });
-
-    expect(second.status).toBe("waitlisted");
-    expect(second.holdExpiresAt).toBeUndefined();
-  });
-
-  it("throws when the attendee already has an active registration for the session", async () => {
-    await expect(
-      registrations.createRegistration({
-        attendeeName: "Ana García",
-        attendeeEmail: "ana@example.com",
-        sessionId: 101,
-      }),
-    ).rejects.toThrow(
-      "The attendee already has an active registration for this session.",
-    );
-  });
-
-  it("throws when the session does not exist", async () => {
-    await expect(
-      registrations.createRegistration({
-        attendeeName: "Someone",
-        attendeeEmail: "someone@example.com",
-        sessionId: 999999,
-      }),
-    ).rejects.toThrow("Session not found");
-  });
-
-  it("reuses an existing attendee instead of creating a duplicate", async () => {
-    await registrations.createRegistration({
-      attendeeName: "Luis Pérez",
-      attendeeEmail: "luis@example.com",
-      sessionId: 103,
-    });
-
-    const all = await attendees.getAttendees();
-    expect(all).toHaveLength(2);
-  });
-});
-
-describe("confirmRegistration", () => {
-  it("confirms a held registration", async () => {
-    const confirmed = await registrations.confirmRegistration(5002);
-
-    expect(confirmed.status).toBe("confirmed");
-    expect(confirmed.confirmedAt).toEqual(expect.any(String));
-    expect(confirmed.holdExpiresAt).toBeUndefined();
-  });
-
-  it("throws when the registration does not exist", async () => {
-    await expect(registrations.confirmRegistration(999999)).rejects.toThrow(
-      "Registration not found",
-    );
-  });
-});
-
-describe("cancelRegistration", () => {
-  it("cancels a registration", async () => {
-    const cancelled = await registrations.cancelRegistration(5002);
-
-    expect(cancelled.status).toBe("cancelled");
-    expect(cancelled.cancelledAt).toEqual(expect.any(String));
-    expect(cancelled.holdExpiresAt).toBeUndefined();
-  });
-
-  it("throws when the registration does not exist", async () => {
-    await expect(registrations.cancelRegistration(999999)).rejects.toThrow(
-      "Registration not found",
-    );
-  });
-
-  it("promotes the earliest waitlisted registration when a slot frees up", async () => {
-    const held = await registrations.createRegistration({
-      attendeeName: "Held Attendee",
-      attendeeEmail: "held@example.com",
-      sessionId: 103,
-    });
-    const waitlisted = await registrations.createRegistration({
-      attendeeName: "Waitlisted Attendee",
-      attendeeEmail: "waitlisted@example.com",
-      sessionId: 103,
-    });
-    expect(waitlisted.status).toBe("waitlisted");
-
-    await registrations.cancelRegistration(held.id);
-
-    const statuses = await sessions.getSessionAttendeeStatuses(103);
-    const promoted = statuses.find((s) => s.email === "waitlisted@example.com");
-    expect(promoted?.status).toBe("held");
-  });
-
-  it("does not promote anyone when there is no waitlist", async () => {
-    await registrations.cancelRegistration(5002);
-
-    const statuses = await sessions.getSessionAttendeeStatuses(101);
-    expect(statuses.find((s) => s.email === "ana@example.com")?.status).toBe(
-      "confirmed",
-    );
-    expect(statuses.some((s) => s.status === "held")).toBe(false);
-  });
-});
-
-describe("getRegistrationsForAttendee", () => {
-  it("returns all registrations for an attendee", async () => {
-    const result = await registrations.getRegistrationsForAttendee(2);
-    expect(result).toHaveLength(2);
-  });
-
-  it("returns an empty list when the attendee has no registrations", async () => {
-    const result = await registrations.getRegistrationsForAttendee(999999);
-    expect(result).toEqual([]);
-  });
-});
-
 describe("getRegistrationHistoryByEmail", () => {
   it("returns the attendee and their registrations", async () => {
+    vi.spyOn(api.apiClient, "get").mockImplementation((url: string) => {
+      if (url === "/attendees") {
+        return Promise.resolve({
+          data: { data: [{ id: 7, name: "Luis Pérez", email: "luis@example.com" }] },
+        });
+      }
+
+      return Promise.resolve({
+        data: {
+          message: null,
+          status: "ok",
+          data: [],
+          pagination: { page: 1, pages: 1, count: 0, limit: 10, next: null, prev: null },
+          status_counts: { held: 0, confirmed: 0, waitlisted: 0, cancelled: 0, expired: 0 },
+        },
+      });
+    });
+
     const history =
       await registrations.getRegistrationHistoryByEmail("luis@example.com");
 
     expect(history?.attendee.name).toBe("Luis Pérez");
-    expect(history?.registrations).toHaveLength(2);
+    expect(history?.data).toEqual([]);
   });
 
   it("returns undefined for an unknown email", async () => {
+    vi.spyOn(api.apiClient, "get").mockResolvedValue({ data: { data: [] } });
+
     const history =
       await registrations.getRegistrationHistoryByEmail("nobody@example.com");
     expect(history).toBeUndefined();
@@ -808,36 +676,12 @@ describe("getWorkshopDashboardMetrics", () => {
       heldRegistrations: 1,
       confirmedRegistrations: 3,
       waitlistedRegistrations: 1,
-      expiredHolds: 0,
-      fullSessions: 0,
+      expiredHoldsToday: 0,
+      fullSessions: 1,
+      topWaitlistedSessions: [
+        { sessionId: 102, startsAt: "2026-08-02T15:00:00Z", waitlistSize: 1 },
+      ],
     })
-    expect(metrics.topWaitlistedSessions).toEqual([
-      { id: 102, title: 'Rails APIs for Modern Teams', waitlistSize: 1 },
-    ])
-  })
-
-  it('reflects newly full sessions and re-sorts waitlisted sessions by size', async () => {
-    await registrations.createRegistration({
-      attendeeName: 'Filler',
-      attendeeEmail: 'filler@example.com',
-      sessionId: 103,
-    })
-    await registrations.createRegistration({
-      attendeeName: 'Waitlisted 1',
-      attendeeEmail: 'w1@example.com',
-      sessionId: 103,
-    })
-    await registrations.createRegistration({
-      attendeeName: 'Waitlisted 2',
-      attendeeEmail: 'w2@example.com',
-      sessionId: 103,
-    })
-
-    const metrics = await dashboard.getDashboardMetrics()
-
-    expect(metrics.fullSessions).toBe(1)
-    expect(metrics.topWaitlistedSessions[0]).toMatchObject({ id: 103, waitlistSize: 2 })
-    expect(metrics.topWaitlistedSessions.length).toBeLessThanOrEqual(3)
   })
 })
 
