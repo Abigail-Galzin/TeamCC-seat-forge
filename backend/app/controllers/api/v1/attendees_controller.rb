@@ -94,4 +94,15 @@ class Api::V1::AttendeesController < ApplicationController
   def attendee_params
     params.require(:attendee).permit(:name, :email)
   end
+
+  def registration_params
+    params.require(:registration).permit(:attendee_id)
+  end
+
+  def find_attendee
+    Attendee.find(registration_params[:attendee_id])
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: I18n.t('errors.response_not_found', model: 'Attendee') }, status: :not_found
+    nil
+  end
 end
