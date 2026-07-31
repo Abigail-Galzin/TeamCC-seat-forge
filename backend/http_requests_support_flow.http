@@ -2,69 +2,147 @@
 @baseUrl = http://localhost:3000/api/v1
 @contentType = application/json
 
-### Health check
+##########################################################################
+# CLIENT DEMO SCRIPT 
+#
+# Run `bin/rails db:seed` first (safe to re-run, always resets to this
+# same deterministic dataset - see db/seeds.rb). It creates a dedicated
+# "Client Demo Workshop" (id 4) with:
+#   - Session 7 "Track A": Monday 11:00-12:00  , capacity 12, already has
+#     Javier Jimenez CONFIRMED.
+#   - Session 8 "Track B": Monday 11:00-12:00   (same hour as Track A,
+#     running in parallel), capacity 8, already has Gina Gutierrez HELD.
+#   - Session 9 "Backup slot": Monday 15:00-16:00  , CANCELLED.
+#
+# Requests below are numbered in the order to run them during the demo.
+# Named requests (# @name) let later steps reuse IDs from earlier
+# responses ({{name.response.body.$.data.id}}), so re-running the whole
+# file end to end still works.
+##########################################################################
+
+### 0. Health check
 GET http://localhost:3000/up
 
-### 3. Create attendees
-# @name createAttendeeA
+### 1. Dashboard overview - all active workshops with their current/next session
+GET {{baseUrl}}/dashboard
+
+### 2. Drill into the Client Demo Workshop's dashboard
+GET {{baseUrl}}/workshops/4/dashboard
+
+### 3. List sessions for the Client Demo Workshop -> Track A, Track B, cancelled Backup slot
+GET {{baseUrl}}/workshops/4/sessions
+
+### 4. Track A detail (session 7)
+GET {{baseUrl}}/workshops/4/sessions/7
+
+### 5. Track A availability - 1 confirmed seat, 11 open
+GET {{baseUrl}}/sessions/7/availability
+
+### 6. Track B detail (session 8) - overlaps Track A by time
+GET {{baseUrl}}/workshops/4/sessions/8
+
+### 7. Track B availability - 1 held seat, 7 open
+GET {{baseUrl}}/sessions/8/availability
+
+### 8. Create a new attendee to register live during the demo
+# @name createGuest
 POST {{baseUrl}}/attendees
 Content-Type: {{contentType}}
 
 {
   "attendee": {
-    "name": "Alex Attendee",
-    "email": "alex@example.com"
+    "name": "Client Guest",
+    "email": "client.guest@example.com"
   }
 }
 
-### @name createAttendeeB
+### 9. Register the guest into Track A -> held (registration lookups are by attendee email, not id)
+# @name registerGuestTrackA
+POST {{baseUrl}}/workshops/4/sessions/7/registrations
+Content-Type: {{contentType}}
+
+{
+  "attendee": {
+    "name": "Client Guest",
+    "email": "client.guest@example.com"
+  }
+}
+
+### 10. Confirm the guest's held registration in Track A
+POST {{baseUrl}}/workshops/4/sessions/7/registrations/{{registerGuestTrackA.response.body.$.data.id}}/confirm
+
+### 11. Try registering the SAME guest into Track B (overlaps Track A by time)
+# Expect 422 unprocessable_entity: "attendee has an overlapping registration for this time"
+POST {{baseUrl}}/workshops/4/sessions/8/registrations
+Content-Type: {{contentType}}
+
+{
+  "attendee": {
+    "name": "Client Guest",
+    "email": "client.guest@example.com"
+  }
+}
+
+### 12. Create a second attendee to demonstrate the cancelled backup slot
+# @name createLatecomer
 POST {{baseUrl}}/attendees
 Content-Type: {{contentType}}
 
 {
   "attendee": {
-    "name": "Blair Backup",
-    "email": "blair@example.com"
+    "name": "Latecomer Guest",
+    "email": "latecomer@example.com"
   }
 }
 
-### List attendees
-GET {{baseUrl}}/attendees
-
-### Show an attendee
-GET {{baseUrl}}/attendees/1
-
-### 4. Register attendee A for the session -> should be held
-# @name registerA
-POST {{baseUrl}}/workshops/2/sessions/1/registrations
+### 13. Try registering into the cancelled Backup slot (session 9)
+# Expect 422 unprocessable_entity: "Session is not open for registration"
+POST {{baseUrl}}/workshops/4/sessions/9/registrations
 Content-Type: {{contentType}}
 
 {
-  "registration": {
-    "attendee_id": 2
+  "attendee": {
+    "name": "Latecomer Guest",
+    "email": "latecomer@example.com"
   }
 }
 
-### List registrations for the session
-GET {{baseUrl}}/workshops/1/sessions/1/registrations
+##########################################################################
+# FULL SESSION + AUTO-WAITLIST (seeded: Introduction to Kubernetes, "Advanced" session)
+##########################################################################
 
-### Show a single registration
-GET {{baseUrl}}/workshops/1/sessions/1/registrations/1
+### 14. Availability of the FULL session (workshop 1 / session 2) -> 0 available seats
+GET {{baseUrl}}/sessions/2/availability
 
-### 6. Confirm attendee A's held registration -> sets confirmed_at, clears hold_expires_at, enqueues a notification job
-POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/confirm
+### 15. Register the latecomer into the full session -> auto-waitlisted (no open seats left)
+POST {{baseUrl}}/workshops/1/sessions/2/registrations
+Content-Type: {{contentType}}
 
-### Confirming again is idempotent -> same result, no duplicate notification
-POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/confirm
+{
+  "attendee": {
+    "name": "Latecomer Guest",
+    "email": "latecomer@example.com"
+  }
+}
 
-### 7. Cancel attendee A's confirmed registration -> releases the seat and promotes attendee B from waitlisted to held
-POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/cancel
+##########################################################################
+# PRE-SEEDED FULL SESSION WITH A VISIBLE WAITLIST (Modern React Patterns, "Hooks" session)
+# Session 4: capacity 4, already 4 confirmed (Hugo id 8, Ivana id 9,
+# Javier id 10, Alice id 1) + 2 waitlisted (Ben registration 16, Carla
+# registration 17).
+##########################################################################
 
-### Cancelling again is idempotent
-POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/cancel
+### 16. List registrations for the full+waitlisted session
+GET {{baseUrl}}/workshops/2/sessions/4/registrations
 
-### Attendee B should now be held (promoted) with a fresh 10-minute hold_expires_at
-GET {{baseUrl}}/workshops/1/sessions/1/registrations/2
+### 17. Cancel Hugo's confirmed registration -> releases a seat
+POST {{baseUrl}}/workshops/2/sessions/4/registrations/12/cancel
 
-### Confirm attendee B's promoted registration
-POST {{baseUrl}}/workshops/1/sessions/1/registrations/2/confirm
+### 18. Ben's waitlisted registration (id 16) is auto-promoted to held with a fresh hold
+GET {{baseUrl}}/workshops/2/sessions/4/registrations/16
+
+### 19. Confirm Ben's newly-promoted registration
+POST {{baseUrl}}/workshops/2/sessions/4/registrations/16/confirm
+
+### 20. Final state of the session's registrations
+GET {{baseUrl}}/workshops/2/sessions/4/registrations
