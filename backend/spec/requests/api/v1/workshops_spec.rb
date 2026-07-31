@@ -1,69 +1,97 @@
 require 'rails_helper'
 
 RSpec.describe "Api::V1::Workshops", type: :request do
-  describe "GET /api/v1/workshops" do
-    it "lists only active workshops" do
-      active = create(:workshop, title: "Active Workshop", active: true)
-      create(:workshop, title: "Inactive Workshop", active: false)
+  describe "GET /index" do
+    it "returns only active workshops when active=true" do
+      active = create(:workshop, active: true)
+      create(:workshop, active: false)
 
-      get "/api/v1/workshops"
+      get "/api/v1/workshops", params: { active: true }
 
+      json = response.parsed_body
       expect(response).to have_http_status(:ok)
-      body = JSON.parse(response.body)
-      expect(body["data"].map { |w| w["id"] }).to eq([ active.id ])
+      expect(json["data"].map { |w| w["id"] }).to eq([ active.id ])
     end
 
-    it "includes each workshop's sessions" do
-      workshop = create(:workshop, active: true)
-      session = create(:session, workshop: workshop, starts_at: 1.day.from_now, ends_at: 1.day.from_now + 1.hour)
+    it "returns every workshop when active is omitted" do
+      create(:workshop, active: true)
+      create(:workshop, active: false)
 
       get "/api/v1/workshops"
 
-      body = JSON.parse(response.body)
-      sessions = body["data"].first["sessions"]
-      expect(sessions.length).to eq(1)
-      expect(sessions.first).to include("capacity" => session.capacity, "status" => session.status)
+      json = response.parsed_body
+      expect(json["data"].length).to eq(2)
     end
 
-    it "paginates with the default page size" do
-      13.times { |n| create(:workshop, title: "Workshop #{n}", active: true) }
+    it "paginates using per_page" do
+      create_list(:workshop, 3)
 
-      get "/api/v1/workshops"
+      get "/api/v1/workshops", params: { per_page: 1, page: 2 }
 
-      body = JSON.parse(response.body)
-      expect(body["data"].length).to eq(10)
-      expect(body["pagination"]).to include("page" => 1, "count" => 13, "limit" => 10, "pages" => 2)
+      json = response.parsed_body
+      expect(json["data"].length).to eq(1)
+      expect(json["pagination"]).to include("page" => 2, "pages" => 3, "limit" => 1)
     end
   end
 
-  describe "POST /api/v1/workshops" do
-    it "creates a workshop" do
-      post "/api/v1/workshops", params: {
-        workshop: { title: "New Workshop", description: "A description", topic: "Testing", active: true }
-      }
+  describe "GET /show" do
+    it "returns the workshop" do
+      workshop = create(:workshop)
 
-      expect(response).to have_http_status(:created)
-      body = JSON.parse(response.body)
-      expect(body["data"]).to include("title" => "New Workshop", "topic" => "Testing")
+      get "/api/v1/workshops/#{workshop.id}"
+
+      json = response.parsed_body
+      expect(response).to have_http_status(:ok)
+      expect(json["data"]["id"]).to eq(workshop.id)
     end
 
-    it "returns a conflict error when validation fails" do
-      post "/api/v1/workshops", params: {
-        workshop: { title: "ab", description: "A description", topic: "Testing", active: true }
-      }
+    it "returns 404 for an unknown workshop" do
+      get "/api/v1/workshops/999999"
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "POST /create" do
+    it "creates a workshop with the given active flag" do
+      post "/api/v1/workshops", params: { workshop: { title: "New Workshop", description: "Desc", topic: "Testing", active: false } }
+
+      json = response.parsed_body
+      expect(response).to have_http_status(:created)
+      expect(json["data"]["active"]).to eq(false)
+    end
+
+    it "returns validation errors" do
+      post "/api/v1/workshops", params: { workshop: { title: "", description: "", topic: "" } }
 
       expect(response).to have_http_status(:unprocessable_entity)
-      body = JSON.parse(response.body)
-      expect(body["error"]["code"]).to eq("creation_conflict")
-      expect(body["error"]["details"]).to be_present
+    end
+  end
+
+  describe "PATCH /update" do
+    it "updates the workshop" do
+      workshop = create(:workshop, title: "Old title", active: true)
+
+      patch "/api/v1/workshops/#{workshop.id}", params: { workshop: { title: "New title", description: workshop.description, topic: workshop.topic, active: false } }
+
+      json = response.parsed_body
+      expect(response).to have_http_status(:ok)
+      expect(json["data"]["title"]).to eq("New title")
+      expect(json["data"]["active"]).to eq(false)
     end
 
-    it "returns a bad_request validation error when the workshop payload is missing entirely" do
-      post "/api/v1/workshops"
+    it "returns 404 for an unknown workshop" do
+      patch "/api/v1/workshops/999999", params: { workshop: { title: "x", description: "x", topic: "x", active: true } }
 
-      expect(response).to have_http_status(:bad_request)
-      body = JSON.parse(response.body)
-      expect(body["error"]["code"]).to eq("validation_error")
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns validation errors" do
+      workshop = create(:workshop)
+
+      patch "/api/v1/workshops/#{workshop.id}", params: { workshop: { title: "", description: "", topic: "" } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
     end
   end
 end

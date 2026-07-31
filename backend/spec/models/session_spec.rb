@@ -124,4 +124,97 @@ RSpec.describe Session, type: :model do
       expect(session.in_progress?).to be false
     end
   end
+
+  describe "#cancel" do
+    it "cancels held, confirmed, and waitlisted registrations and marks the session cancelled" do
+      session = create(:session, capacity: 5)
+      held = create(:registration, session: session, status: "held")
+      confirmed = create(:registration, session: session, status: "confirmed", confirmed_at: 1.hour.ago, hold_expires_at: nil)
+      waitlisted = create(:registration, session: session, status: "waitlisted", hold_expires_at: nil)
+
+      ok, counts = session.cancel("Instructor unavailable")
+
+      expect(ok).to be true
+      expect(counts).to eq("held" => 1, "confirmed" => 1, "waitlisted" => 1)
+
+      session.reload
+      expect(session.status).to eq("cancelled")
+      expect(session.cancellation_reason).to eq("Instructor unavailable")
+      expect(session.cancelled_at).to be_present
+
+      expect(held.reload.status).to eq("cancelled")
+      expect(held.hold_expires_at).to be_nil
+      expect(confirmed.reload.status).to eq("cancelled")
+      expect(waitlisted.reload.status).to eq("cancelled")
+    end
+
+    it "leaves expired and already-cancelled registrations unchanged" do
+      session = create(:session, capacity: 5)
+      expired = create(:registration, session: session, status: "expired", hold_expires_at: nil)
+      original_cancelled_at = 2.hours.ago
+      already_cancelled = create(
+        :registration, session: session, status: "cancelled", cancelled_at: original_cancelled_at, hold_expires_at: nil
+      )
+
+      ok, counts = session.cancel("Instructor unavailable")
+
+      expect(ok).to be true
+      expect(counts).to eq("held" => 0, "confirmed" => 0, "waitlisted" => 0)
+      expect(expired.reload.status).to eq("expired")
+      expect(already_cancelled.reload.cancelled_at).to be_within(1.second).of(original_cancelled_at)
+    end
+
+    it "is idempotent for an already-cancelled session and does not re-touch its registrations" do
+      session = create(:session, capacity: 5)
+      held = create(:registration, session: session, status: "held")
+      session.update_columns(status: "cancelled", cancellation_reason: "Original reason", cancelled_at: 2.hours.ago)
+
+      ok, counts = session.cancel("New reason")
+
+      expect(ok).to be true
+      expect(counts).to eq("held" => 0, "confirmed" => 0, "waitlisted" => 0)
+      expect(session.reload.cancellation_reason).to eq("Original reason")
+      expect(held.reload.status).to eq("held")
+    end
+
+    it "does not re-enqueue notifications when cancelling an already-cancelled session" do
+      session = create(:session, capacity: 5)
+      create(:registration, session: session, status: "held")
+      session.cancel("Instructor unavailable")
+
+      expect {
+        session.cancel("Instructor unavailable")
+      }.not_to have_enqueued_job(RegistrationNotificationJob)
+    end
+
+    it "enqueues a notification job for held and confirmed attendees" do
+      session = create(:session, capacity: 5)
+      held = create(:registration, session: session, status: "held")
+      confirmed = create(:registration, session: session, status: "confirmed", confirmed_at: 1.hour.ago, hold_expires_at: nil)
+
+      expect {
+        session.cancel("Instructor unavailable")
+      }.to have_enqueued_job(RegistrationNotificationJob).with(held.id, "session_cancelled")
+        .and have_enqueued_job(RegistrationNotificationJob).with(confirmed.id, "session_cancelled")
+    end
+
+    it "does not enqueue a notification job for a waitlisted attendee" do
+      session = create(:session, capacity: 5)
+      waitlisted = create(:registration, session: session, status: "waitlisted", hold_expires_at: nil)
+
+      expect {
+        session.cancel("Instructor unavailable")
+      }.not_to have_enqueued_job(RegistrationNotificationJob).with(waitlisted.id, "session_cancelled")
+    end
+
+    it "does not promote waitlisted registrations" do
+      session = create(:session, capacity: 1)
+      create(:registration, session: session, status: "held")
+      waitlisted = create(:registration, session: session, status: "waitlisted", hold_expires_at: nil)
+
+      session.cancel("Instructor unavailable")
+
+      expect(waitlisted.reload.status).to eq("cancelled")
+    end
+  end
 end

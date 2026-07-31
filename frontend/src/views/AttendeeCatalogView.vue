@@ -69,7 +69,7 @@ onMounted(() => loadPage())
             </template>
             <template #footer>
               <Button
-                label="View sessions & register"
+                label="View sessions"
                 severity="primary"
                 class="view-sessions-btn"
                 @click="router.push({ name: 'attendee-workshop-sessions', params: { workshopId: workshop.id } })"

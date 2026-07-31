@@ -10,6 +10,8 @@ module Sessions
       relation = apply_workshop_filter(relation)
       relation = apply_starts_after_filter(relation)
       relation = apply_ends_before_filter(relation)
+      relation = apply_topic_filter(relation)
+      relation = apply_available_filter(relation)
       relation = apply_order(relation)
       relation
     end
@@ -52,8 +54,28 @@ module Sessions
       end
     end
 
+    def apply_topic_filter(relation)
+      return relation unless params[:topic].present?
+      relation.joins(:workshop).where('LOWER(workshops.topic) = ?', params[:topic].to_s.downcase)
+    end
+
+    def apply_available_filter(relation)
+      return relation unless ActiveModel::Type::Boolean.new.cast(params[:available])
+      relation.where("sessions.capacity - (#{confirmed_count_subquery}) > 0")
+    end
+
     def apply_order(relation)
-      relation.order(starts_at: :asc)
+      if params[:sort] == 'available_seats'
+        relation.order(Arel.sql("(sessions.capacity - (#{confirmed_count_subquery})) ASC"))
+      else
+        relation.order(starts_at: :asc)
+      end
+    end
+
+    # Confirmed seats aren't counter-cached, so availability is computed on the fly via a
+    # correlated subquery — matches Session#available_seats (capacity - confirmed_seats).
+    def confirmed_count_subquery
+      "SELECT COUNT(*) FROM registrations WHERE registrations.session_id = sessions.id AND registrations.status = 'confirmed'"
     end
   end
 end

@@ -12,6 +12,7 @@ class Response::SessionSerializer
       id: @session.id,
       workshop_id: @session.workshop_id,
       workshop_title: @session.workshop.title,
+      topic: @session.workshop.topic,
       starts_at: @session.starts_at&.iso8601,
       ends_at: @session.ends_at&.iso8601,
       capacity: @session.capacity,
