@@ -23,6 +23,12 @@ class Api::V1::SessionsController < ApplicationController
 
   # POST /api/v1/workshops/:workshop_id/sessions
   def create
+    unless @workshop.active?
+      render json:
+        { error: "Cannot create session for inactive workshop", details: ["Workshop is not active"] },
+        status: :unprocessable_entity
+      return
+    end
     @session = @workshop.sessions.new(session_params)
 
     if @session.save
@@ -89,7 +95,7 @@ class Api::V1::SessionsController < ApplicationController
   end
 
   def session_params
-    params.require(:session).permit(:starts_at, :ends_at, :capacity, :status)
+    params.require(:session).permit(:starts_at, :ends_at, :capacity)
   end
 
   def filter_params

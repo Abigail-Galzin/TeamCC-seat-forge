@@ -15,6 +15,7 @@ class Session < ApplicationRecord
 
   validate :starts_at_and_ends_at_are_valid_iso8601
   validate :starts_at_must_be_earlier_than_ends_at
+  validate :starts_in_future, on: :create
 
   def held_seats
     registrations.where(status: :held).count
@@ -54,6 +55,14 @@ class Session < ApplicationRecord
 
     if starts_at >= ends_at
       errors.add(:starts_at, "must be earlier than ends_at")
+    end
+  end
+
+  def starts_in_future
+    return if starts_at.blank? || !starts_at.is_a?(Time)
+
+    if starts_at <= Time.current
+      errors.add(:starts_at, "must be in the future")
     end
   end
 end
