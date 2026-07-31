@@ -68,3 +68,23 @@ export interface SessionListApiRecord extends SessionApiRecord {
   waitlist_size: number
   available_seats: number
 }
+
+export interface SessionCancellationCounts {
+  held: number
+  confirmed: number
+  waitlisted: number
+}
+
+export interface SessionCancellationResult {
+  sessionId: number
+  status: 'scheduled' | 'cancelled' | 'completed'
+  cancellationReason: string
+  cancelledRegistrations: SessionCancellationCounts
+}
+
+export interface SessionCancellationApiRecord {
+  session_id: number
+  status: 'scheduled' | 'cancelled' | 'completed'
+  cancellation_reason: string
+  cancelled_registrations: SessionCancellationCounts
+}
