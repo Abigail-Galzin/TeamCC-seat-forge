@@ -32,6 +32,7 @@ Rails.application.routes.draw do
       resources :sessions, only: [:index, :show] do
         member do
           get :availability
+          post :cancel
         end
       end
     end

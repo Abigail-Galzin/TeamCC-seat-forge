@@ -40,4 +40,5 @@ en:
     registration_conflict: "The attendee already has an active registration for this session."
     confirm_error: "Could not confirm the %{model}"
     cancel_error: "Could not cancel the %{model}"
+    cancellation_reason_required: "A cancellation reason is required"
     invalid_characters: "contains invalid characters"

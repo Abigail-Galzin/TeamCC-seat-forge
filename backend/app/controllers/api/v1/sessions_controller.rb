@@ -1,6 +1,6 @@
 class Api::V1::SessionsController < ApplicationController
   before_action :set_workshop, only: [:create, :index]
-  before_action :set_session, only: [:show, :availability]
+  before_action :set_session, only: [:show, :availability, :cancel]
 
   # GET /api/v1/sessions
   def index
@@ -82,6 +82,48 @@ class Api::V1::SessionsController < ApplicationController
     )
 
     render json: response.as_json, status: response.status
+  end
+
+  # POST /api/v1/sessions/:id/cancel
+  def cancel
+    reason = params[:cancellation_reason].to_s.strip
+
+    if reason.blank?
+      response = Response::ResponseError.new(
+        code: "validation_error",
+        message: I18n.t('errors.cancellation_reason_required'),
+        details: [],
+        status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
+      return
+    end
+
+    ok, counts = @session.cancel(reason)
+
+    if ok
+      resp = Response::ResponseData.new(
+        data: {
+          session_id: @session.id,
+          status: @session.status,
+          cancellation_reason: @session.cancellation_reason,
+          cancelled_registrations: counts.slice("held", "confirmed", "waitlisted")
+        },
+        message: I18n.t('success.response', model: Session.model_name.human)
+      )
+
+      render json: resp.as_json, status: resp.status
+    else
+      response = Response::ResponseError.new(
+        code: "cancellation_conflict",
+        message: I18n.t('errors.cancel_error', model: Session.model_name.human),
+        details: @session.errors.full_messages,
+        status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
+    end
   end
 
   private
