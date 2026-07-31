@@ -68,15 +68,11 @@ class Api::V1::AttendeesController < ApplicationController
     )
     render json: resp.as_json
       .merge(Response::ResponsePaginationInfo.new(@pagy).as_json)
-      .merge(status_counts: registration_status_counts),
+      .merge(status_counts: @attendee.registration_status_counts),
       status: resp.status
   end
 
   private
-
-  def registration_status_counts
-    Registration.statuses.keys.index_with(0).merge(@attendee.registrations.group(:status).count)
-  end
 
   def per_page
     requested = params[:per_page].presence&.to_i

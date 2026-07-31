@@ -130,12 +130,10 @@ class Api::V1::RegistrationsController < ApplicationController
   end
 
   def find_or_create_attendee
-    email = attendee_params[:email].to_s.strip
-    existing = Attendee.find_by("lower(email) = ?", email.downcase)
-    return existing if existing
-
-    attendee = Attendee.new(name: attendee_params[:name].to_s.strip, email: email)
-    return attendee if attendee.save
+    attendee = Attendee.find_or_create_for_registration(
+      name: attendee_params[:name], email: attendee_params[:email]
+    )
+    return attendee if attendee.persisted?
 
     response = Response::ResponseError.new(
       code: "validation_error",
