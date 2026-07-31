@@ -48,5 +48,5 @@ export interface SessionAttendee {
 export interface SessionRegistrationApiRecord {
   id: number
   status: Registration['status']
-  attendee: { id: number; name: string; email: string }
+  attendee: { id: number; name: string; email: string } | null
 }

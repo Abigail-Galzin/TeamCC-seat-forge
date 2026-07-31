@@ -503,7 +503,7 @@ describe('getRegistrationHistoryByEmail', () => {
 })
 
 describe('reserveSeatFromApi', () => {
-  it('posts the attendee identity under the workshop/session and maps the created registration', async () => {
+  it('ensures the attendee exists, then posts the attendee identity under the workshop/session and maps the created registration', async () => {
     const registrationRecord = {
       id: 55,
       attendee_id: 9,
@@ -513,7 +513,10 @@ describe('reserveSeatFromApi', () => {
       confirmed_at: null,
       cancelled_at: null,
     }
-    vi.spyOn(api.apiClient, 'post').mockResolvedValue({ data: { data: registrationRecord } })
+    vi.spyOn(api.apiClient, 'post').mockImplementation((url) => {
+      if (url === '/attendees') return Promise.resolve({ data: { data: { id: 9 } } })
+      return Promise.resolve({ data: { data: registrationRecord } })
+    })
 
     const result = await registrations.reserveSeatFromApi(1, {
       attendeeName: 'New Attendee',
@@ -521,6 +524,9 @@ describe('reserveSeatFromApi', () => {
       sessionId: 101,
     })
 
+    expect(api.apiClient.post).toHaveBeenCalledWith('/attendees', {
+      attendee: { name: 'New Attendee', email: 'new-attendee@example.com' },
+    })
     expect(api.apiClient.post).toHaveBeenCalledWith('/workshops/1/sessions/101/registrations', {
       attendee: { name: 'New Attendee', email: 'new-attendee@example.com' },
     })
@@ -535,7 +541,59 @@ describe('reserveSeatFromApi', () => {
     })
   })
 
-  it('propagates backend conflicts as axios errors', async () => {
+  it('treats a duplicate-email conflict from attendee creation as success and still registers', async () => {
+    const duplicateEmailError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: {
+        status: 422,
+        data: { error: { code: 'creation_conflict', message: 'Could not create.', details: ['Email has already been taken'] } },
+      },
+    })
+    const registrationRecord = {
+      id: 56,
+      attendee_id: 3,
+      session_id: 101,
+      status: 'held',
+      hold_expires_at: '2026-07-29T18:10:00.000Z',
+      confirmed_at: null,
+      cancelled_at: null,
+    }
+    vi.spyOn(api.apiClient, 'post').mockImplementation((url) => {
+      if (url === '/attendees') return Promise.reject(duplicateEmailError)
+      return Promise.resolve({ data: { data: registrationRecord } })
+    })
+
+    const result = await registrations.reserveSeatFromApi(1, {
+      attendeeName: 'Existing Person',
+      attendeeEmail: 'existing@example.com',
+      sessionId: 101,
+    })
+
+    expect(result.id).toBe(56)
+  })
+
+  it('propagates a genuine attendee validation error without attempting to register', async () => {
+    const validationError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: {
+        status: 422,
+        data: { error: { code: 'creation_conflict', message: 'Could not create.', details: ['Email is invalid'] } },
+      },
+    })
+    vi.spyOn(api.apiClient, 'post').mockRejectedValue(validationError)
+
+    await expect(
+      registrations.reserveSeatFromApi(1, {
+        attendeeName: 'A',
+        attendeeEmail: 'not-an-email',
+        sessionId: 101,
+      }),
+    ).rejects.toBe(validationError)
+
+    expect(api.apiClient.post).toHaveBeenCalledTimes(1)
+  })
+
+  it('propagates backend conflicts from registration as axios errors', async () => {
     const axiosError = Object.assign(new Error('Request failed'), {
       isAxiosError: true,
       response: {
@@ -543,7 +601,10 @@ describe('reserveSeatFromApi', () => {
         data: { error: { code: 'creation_conflict', message: 'Already registered.', details: [] } },
       },
     })
-    vi.spyOn(api.apiClient, 'post').mockRejectedValue(axiosError)
+    vi.spyOn(api.apiClient, 'post').mockImplementation((url) => {
+      if (url === '/attendees') return Promise.resolve({ data: { data: { id: 1 } } })
+      return Promise.reject(axiosError)
+    })
 
     await expect(
       registrations.reserveSeatFromApi(1, {

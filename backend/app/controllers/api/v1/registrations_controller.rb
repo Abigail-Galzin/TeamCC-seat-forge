@@ -31,10 +31,8 @@ class Api::V1::RegistrationsController < ApplicationController
   end
 
   # POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations
-  # Registers using attendee identity (name + email): reuses the attendee if the
-  # email already exists, otherwise creates one, then reserves the seat.
   def create
-    attendee = find_or_create_attendee
+    attendee = find_attendee
     return if attendee.nil?
 
     @registration = Registration.register(attendee: attendee, session: @session)
@@ -129,19 +127,11 @@ class Api::V1::RegistrationsController < ApplicationController
     params.require(:attendee).permit(:name, :email)
   end
 
-  def find_or_create_attendee
-    attendee = Attendee.find_or_create_for_registration(
-      name: attendee_params[:name], email: attendee_params[:email]
-    )
-    return attendee if attendee.persisted?
+  def find_attendee
+    attendee = Attendee.find_by_email(attendee_params[:email])
+    return attendee if attendee
 
-    response = Response::ResponseError.new(
-      code: "validation_error",
-      message: I18n.t('errors.create_error', model: Attendee.model_name.human),
-      details: attendee.errors.full_messages,
-      status: :unprocessable_entity
-    )
-    render json: response.as_json, status: response.status
+    render json: { error: I18n.t('errors.response_not_found', model: 'Attendee') }, status: :not_found
     nil
   end
 end

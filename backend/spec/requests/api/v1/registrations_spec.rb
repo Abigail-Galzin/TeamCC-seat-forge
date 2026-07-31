@@ -67,27 +67,29 @@ RSpec.describe "Api::V1::Registrations", type: :request do
   end
 
   describe "POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations" do
-    it "creates the attendee and holds a registration when the session has capacity" do
+    it "holds a registration for an existing attendee when the session has capacity" do
       workshop = create(:workshop)
       session = create(:session, workshop: workshop, capacity: 5)
+      attendee = create(:attendee, name: "Jane Doe", email: "jane@example.com")
 
       post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations",
-        params: { attendee: { name: "Jane Doe", email: "jane@example.com" } }
+        params: { attendee: { name: attendee.name, email: attendee.email } }
 
       expect(response).to have_http_status(:created)
       body = JSON.parse(response.body)
       expect(body["data"]["status"]).to eq("held")
       expect(body["data"]["hold_expires_at"]).to be_present
-      expect(Attendee.find_by(email: "jane@example.com")).to be_present
+      expect(body["data"]["attendee_id"]).to eq(attendee.id)
     end
 
     it "waitlists the registration when the session is full" do
       workshop = create(:workshop)
       session = create(:session, workshop: workshop, capacity: 1)
       create(:registration, session: session, status: "held")
+      attendee = create(:attendee, name: "New Person", email: "new@example.com")
 
       post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations",
-        params: { attendee: { name: "New Person", email: "new@example.com" } }
+        params: { attendee: { name: attendee.name, email: attendee.email } }
 
       expect(response).to have_http_status(:created)
       body = JSON.parse(response.body)
@@ -123,16 +125,14 @@ RSpec.describe "Api::V1::Registrations", type: :request do
       expect(body["error"]["code"]).to eq("creation_conflict")
     end
 
-    it "returns a validation_error when the new attendee's email is invalid" do
+    it "returns a not_found error when no attendee matches the given email" do
       workshop = create(:workshop)
       session = create(:session, workshop: workshop, capacity: 5)
 
       post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations",
-        params: { attendee: { name: "A", email: "not-an-email" } }
+        params: { attendee: { name: "A", email: "unknown@example.com" } }
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      body = JSON.parse(response.body)
-      expect(body["error"]["code"]).to eq("validation_error")
+      expect(response).to have_http_status(:not_found)
     end
 
     it "returns a bad_request validation error when the attendee payload is missing entirely" do

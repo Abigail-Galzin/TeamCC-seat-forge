@@ -1,6 +1,6 @@
 import { registrationStore, nextRegistrationId, getActiveRegistrationsForSession } from './mock-store'
 import { getSessionById } from './sessions'
-import { createAttendee, getAttendeeByEmail } from './attendees'
+import { createAttendee, getAttendeeByEmail, ensureAttendeeExistsInApi } from './attendees'
 import { apiClient } from './api'
 import type { Registration, RegistrationPayload, RegistrationApiRecord } from '../types/registration'
 import type { Attendee } from '../types/attendee'
@@ -112,11 +112,15 @@ function toRegistration(record: RegistrationApiRecord): Registration {
 /**
  * Reserves a seat against the real Rails backend
  * (POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations).
- * The backend finds-or-creates the attendee by email and is the source of truth for
- * capacity, held-vs-waitlisted, and conflict validation (duplicate/overlapping registration) —
- * callers should surface backend errors via getErrorMessage rather than a generic message.
+ * The registrations endpoint only looks up the attendee by email — it never creates
+ * one — so this first ensures the attendee exists (POST /api/v1/attendees) before
+ * registering. The backend is the source of truth for capacity, held-vs-waitlisted,
+ * and conflict validation (duplicate/overlapping registration) — callers should
+ * surface backend errors via getErrorMessage rather than a generic message.
  */
 export async function reserveSeatFromApi(workshopId: number, payload: RegistrationPayload): Promise<Registration> {
+  await ensureAttendeeExistsInApi(payload.attendeeName, payload.attendeeEmail)
+
   const response = await apiClient.post<{ data: RegistrationApiRecord }>(
     `/workshops/${workshopId}/sessions/${payload.sessionId}/registrations`,
     { attendee: { name: payload.attendeeName, email: payload.attendeeEmail } },

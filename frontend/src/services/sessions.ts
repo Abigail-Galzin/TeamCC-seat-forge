@@ -139,9 +139,9 @@ export async function getSessionAttendeesFromApi(
   return {
     ...response.data,
     data: response.data.data.map((record) => ({
-      attendeeId: record.attendee.id,
-      name: record.attendee.name,
-      email: record.attendee.email,
+      attendeeId: record.attendee?.id ?? 0,
+      name: record.attendee?.name ?? 'Unknown attendee',
+      email: record.attendee?.email ?? 'unknown@example.com',
       status: record.status,
     })),
   }

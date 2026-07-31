@@ -2,6 +2,7 @@ import axios from 'axios'
 import { attendeeStore, nextAttendeeId } from './mock-store'
 import { apiClient, DEFAULT_PAGE_SIZE } from './api'
 import type { Attendee, AttendeeRegistrationApiRecord, AttendeeRegistrationsResult } from '../types/attendee'
+import type { ApiErrorBody } from '../types/api-error'
 import type { PaginationInfo } from '../types/pagination'
 import type { RegistrationStatusCounts } from '../types/registration'
 
@@ -29,6 +30,29 @@ export async function createAttendee(name: string, email: string): Promise<Atten
 
   attendeeStore.unshift(attendee)
   return attendee
+}
+
+/**
+ * Ensures an attendee exists in the real backend for this name/email
+ * (POST /api/v1/attendees), so a subsequent registration lookup by email
+ * succeeds. The registrations endpoint only searches for the attendee —
+ * it never creates one — so callers must ensure the attendee exists first.
+ * A duplicate-email conflict means the attendee already exists and is
+ * treated as success; every other validation error is rethrown.
+ */
+export async function ensureAttendeeExistsInApi(name: string, email: string): Promise<void> {
+  try {
+    await apiClient.post('/attendees', { attendee: { name, email } })
+  } catch (error) {
+    if (axios.isAxiosError<ApiErrorBody>(error) && error.response?.status === 422) {
+      const details = error.response.data?.error?.details ?? []
+      const isDuplicateEmail = details.some(
+        (detail) => typeof detail === 'string' && detail.toLowerCase().includes('email has already been taken'),
+      )
+      if (isDuplicateEmail) return
+    }
+    throw error
+  }
 }
 
 /**
