@@ -24,9 +24,14 @@ class Api::V1::SessionsController < ApplicationController
   # POST /api/v1/workshops/:workshop_id/sessions
   def create
     unless @workshop.active?
-      render json:
-        { error: "Cannot create session for inactive workshop", details: ["Workshop is not active"] },
+      response = Response::ResponseError.new(
+        code: "creation_conflict",
+        message: I18n.t('errors.create_error', model: Session.model_name.human),
+        details: [ "Workshop is not active" ],
         status: :unprocessable_entity
+      )
+
+      render json: response.as_json, status: response.status
       return
     end
     @session = @workshop.sessions.new(session_params)

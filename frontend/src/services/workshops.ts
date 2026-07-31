@@ -1,54 +1,62 @@
+import axios from 'axios'
 import { apiClient, DEFAULT_PAGE_SIZE } from './api'
-import { workshopStore, sessionStore, nextWorkshopId, paginateMock } from './mock-store'
 import type { Workshop, CreateWorkshopPayload } from '../types/workshop'
-import type { PaginatedResult } from '../types/pagination'
+import type { PaginatedResult, PaginationInfo } from '../types/pagination'
+
+// GET /api/v1/workshops caps per_page at Pagy::DEFAULT[:items] (PAGY_DEFAULT_ITEMS) server-side.
+const MAX_WORKSHOPS_PER_PAGE = DEFAULT_PAGE_SIZE
 
 export async function getWorkshops(
   page = 1,
   perPage = DEFAULT_PAGE_SIZE,
   activeOnly = true,
 ): Promise<PaginatedResult<Workshop>> {
-  await Promise.resolve()
-  const filtered = activeOnly
-    ? workshopStore.filter(
-        (workshop) => workshop.active && sessionStore.some((session) => session.workshopId === workshop.id),
-      )
-    : workshopStore
-  return paginateMock(filtered, page, perPage)
-}
+  const response = await apiClient.get<{
+    message: string | null
+    data: Workshop[]
+    status: string
+    pagination: PaginationInfo
+  }>('/workshops', {
+    params: { active: activeOnly || undefined, page, per_page: perPage },
+  })
 
-export async function createWorkshop(payload: CreateWorkshopPayload): Promise<Workshop> {
-  const workshop: Workshop = {
-    id: nextWorkshopId(),
-    ...payload,
-  }
-
-  workshopStore.unshift(workshop)
-  return workshop
-}
-
-export async function getWorkshopById(id: number): Promise<Workshop | undefined> {
-  await Promise.resolve()
-  return workshopStore.find((workshop) => workshop.id === id)
-}
-
-export async function updateWorkshop(id: number, payload: CreateWorkshopPayload): Promise<Workshop> {
-  await Promise.resolve()
-  const workshop = workshopStore.find((item) => item.id === id)
-  if (!workshop) {
-    throw new Error('Workshop not found')
-  }
-
-  Object.assign(workshop, payload)
-  return workshop
-}
-
-export async function getWorkshopsFromApi(): Promise<Workshop[]> {
-  const response = await apiClient.get<Workshop[]>('/workshops')
   return response.data
 }
 
+export async function createWorkshop(payload: CreateWorkshopPayload): Promise<Workshop> {
+  const response = await apiClient.post<{ data: Workshop }>('/workshops', { workshop: payload })
+  return response.data.data
+}
+
+/**
+ * Loads a single workshop from the real backend (GET /api/v1/workshops/:id).
+ * Returns undefined on a 404 so views can show a "not found" state.
+ */
+export async function getWorkshopById(id: number): Promise<Workshop | undefined> {
+  try {
+    const response = await apiClient.get<{ data: Workshop }>(`/workshops/${id}`)
+    return response.data.data
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return undefined
+    }
+    throw error
+  }
+}
+
+export async function updateWorkshop(id: number, payload: CreateWorkshopPayload): Promise<Workshop> {
+  const response = await apiClient.patch<{ data: Workshop }>(`/workshops/${id}`, { workshop: payload })
+  return response.data.data
+}
+
+/**
+ * Derives the sorted, de-duplicated topic list from every workshop (active or not), for use in
+ * filter dropdowns. Fetches a single large page rather than a dedicated endpoint, so topics
+ * beyond the first MAX_WORKSHOPS_PER_PAGE workshops won't appear.
+ */
 export async function getWorkshopTopics(): Promise<string[]> {
-  await Promise.resolve()
-  return Array.from(new Set(workshopStore.map((workshop) => workshop.topic))).sort()
+  const response = await apiClient.get<{ data: Workshop[] }>('/workshops', {
+    params: { per_page: MAX_WORKSHOPS_PER_PAGE },
+  })
+  return Array.from(new Set(response.data.data.map((workshop) => workshop.topic))).sort()
 }

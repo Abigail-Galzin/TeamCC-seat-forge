@@ -50,3 +50,21 @@ export interface SessionRegistrationApiRecord {
   status: Registration['status']
   attendee: { id: number; name: string; email: string } | null
 }
+
+export interface SessionApiRecord {
+  id: number
+  workshop_id: number
+  workshop_title: string
+  starts_at: string
+  ends_at: string
+  capacity: number
+  status: 'scheduled' | 'cancelled' | 'completed'
+}
+
+export interface SessionListApiRecord extends SessionApiRecord {
+  topic: string
+  held_seats: number
+  confirmed_seats: number
+  waitlist_size: number
+  available_seats: number
+}
