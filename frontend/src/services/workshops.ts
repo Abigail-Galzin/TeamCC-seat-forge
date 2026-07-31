@@ -1,11 +1,11 @@
-import { apiClient } from './api'
+import { apiClient, DEFAULT_PAGE_SIZE } from './api'
 import { workshopStore, sessionStore, nextWorkshopId, paginateMock } from './mock-store'
 import type { Workshop, CreateWorkshopPayload } from '../types/workshop'
 import type { PaginatedResult } from '../types/pagination'
 
 export async function getWorkshops(
   page = 1,
-  perPage = 5,
+  perPage = DEFAULT_PAGE_SIZE,
   activeOnly = true,
 ): Promise<PaginatedResult<Workshop>> {
   await Promise.resolve()
