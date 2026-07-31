@@ -1,9 +1,9 @@
 class Api::V1::AttendeesController < ApplicationController
-  before_action :set_attendee, only: [ :show ]
+  before_action :set_attendee, only: [ :show, :registrations ]
 
-  # GET /api/v1/attendees
+  # GET /api/v1/attendees?page=1&per_page=10
   def index
-    @pagy, @attendees = pagy(Attendee.all, limit: 10)
+    @pagy, @attendees = pagy(Attendee.all.order(:name), items: per_page)
 
     resp = Response::ResponseData.new(
       data: @attendees.as_json(except: [ :created_at, :updated_at ]),
@@ -44,7 +44,46 @@ class Api::V1::AttendeesController < ApplicationController
     end
   end
 
+  # GET /api/v1/attendees/:id/registrations?page=1&per_page=10
+  # Lists the sessions (via their registrations) this attendee has registered for, most recent
+  # first, alongside real-time registration counts by status across *all* of the attendee's
+  # registrations (not just the current page).
+  def registrations
+    @pagy, @registrations = pagy(
+      @attendee.registrations.includes(session: :workshop).order(created_at: :desc),
+      items: per_page
+    )
+
+    resp = Response::ResponseData.new(
+      data: @registrations.as_json(
+        except: [ :created_at, :updated_at ],
+        include: {
+          session: {
+            only: [ :id, :starts_at, :ends_at, :capacity, :status ],
+            include: { workshop: { only: [ :id, :title, :topic ] } }
+          }
+        }
+      ),
+      message: I18n.t('success.response', model: Registration.model_name.human.pluralize)
+    )
+    render json: resp.as_json
+      .merge(Response::ResponsePaginationInfo.new(@pagy).as_json)
+      .merge(status_counts: registration_status_counts),
+      status: resp.status
+  end
+
   private
+
+  def registration_status_counts
+    Registration.statuses.keys.index_with(0).merge(@attendee.registrations.group(:status).count)
+  end
+
+  def per_page
+    requested = params[:per_page].presence&.to_i
+    return Pagy::DEFAULT[:items] if requested.blank? || requested < 1
+
+    [ requested, Pagy::DEFAULT[:items] ].min
+  end
 
   def set_attendee
     @attendee = Attendee.find(params[:id])

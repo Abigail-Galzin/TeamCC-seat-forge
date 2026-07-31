@@ -13,3 +13,12 @@ export interface PaginatedResult<T> {
   status: string
   pagination: PaginationInfo
 }
+
+export function emptyPaginatedResult<T>(limit: number): PaginatedResult<T> {
+  return {
+    message: null,
+    data: [],
+    status: 'ok',
+    pagination: { page: 1, pages: 1, count: 0, limit, next: null, prev: null },
+  }
+}
