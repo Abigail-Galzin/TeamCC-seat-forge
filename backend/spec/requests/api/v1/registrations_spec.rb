@@ -122,7 +122,9 @@ RSpec.describe "Api::V1::Registrations", type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       body = JSON.parse(response.body)
-      expect(body["error"]["code"]).to eq("creation_conflict")
+      expect(body["error"]["code"]).to eq("registration_conflict")
+      expect(body["error"]["message"]).to eq("The attendee already has an active registration for this session.")
+      expect(body["error"]["details"]).to eq([])
     end
 
     it "returns a not_found error when no attendee matches the given email" do

@@ -1,6 +1,7 @@
 class Registration < ApplicationRecord
   ACTIVE_STATUSES = %w[held confirmed waitlisted].freeze
   HOLD_DURATION = 10.minutes
+  DUPLICATE_ACTIVE_REGISTRATION_MESSAGE = "attendee already has an active registration for this session".freeze
 
   belongs_to :attendee
   belongs_to :session
@@ -174,7 +175,7 @@ class Registration < ApplicationRecord
     duplicates = Registration.where(attendee_id: attendee_id, session_id: session_id, status: ACTIVE_STATUSES)
     duplicates = duplicates.where.not(id: id) if persisted?
 
-    errors.add(:base, "attendee already has an active registration for this session") if duplicates.exists?
+    errors.add(:base, DUPLICATE_ACTIVE_REGISTRATION_MESSAGE) if duplicates.exists?
   end
 
   def attendee_must_not_have_overlapping_registration
