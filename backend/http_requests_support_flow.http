@@ -36,12 +36,12 @@ GET {{baseUrl}}/attendees/1
 
 ### Register attendee A for the session -> should be held
 # @name registerA
-POST {{baseUrl}}/workshops/1/sessions/10/registrations
+POST {{baseUrl}}/workshops/2/sessions/1/registrations
 Content-Type: {{contentType}}
 
 {
   "registration": {
-    "attendee_id": 7
+    "attendee_id": 2
   }
 }
 
