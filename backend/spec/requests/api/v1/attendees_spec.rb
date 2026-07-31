@@ -14,7 +14,7 @@ RSpec.describe "Api::V1::Attendees", type: :request do
     end
 
     it "paginates with the default page size and returns the second page when requested" do
-      13.times { |n| create(:attendee, name: format("Attendee %02d", n)) }
+      13.times { |n| create(:attendee, name: "Attendee #{('A'..'Z').to_a[n]}") }
 
       get "/api/v1/attendees"
       body = JSON.parse(response.body)

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import axios from "axios";
 import type * as WorkshopsService from "../services/workshops";
 import type * as SessionsService from "../services/sessions";
 import type * as AttendeesService from "../services/attendees";
