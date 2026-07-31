@@ -16,6 +16,22 @@ class Session < ApplicationRecord
   validate :starts_at_and_ends_at_are_valid_iso8601
   validate :starts_at_must_be_earlier_than_ends_at
 
+  def held_seats
+    registrations.where(status: :held).count
+  end
+
+  def confirmed_seats
+    registrations.where(status: :confirmed).count
+  end
+
+  def waitlist_size
+    registrations.where(status: :waitlisted).count
+  end
+
+  def available_seats
+    [capacity - confirmed_seats, 0].max
+  end
+
   private
 
   def starts_at_and_ends_at_are_valid_iso8601
