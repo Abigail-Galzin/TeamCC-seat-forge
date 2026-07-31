@@ -20,6 +20,12 @@ Rails.application.routes.draw do
         end
       end
       resources :attendees, only: [ :index, :show, :create ]
+
+      resources :sessions, only: [:index, :show] do
+        member do
+          get :availability
+        end
+      end
     end
   end
 end
