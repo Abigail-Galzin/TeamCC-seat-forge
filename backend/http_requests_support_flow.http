@@ -5,6 +5,45 @@
 ### Health check
 GET http://localhost:3000/up
 
+### 1. Create a workshop -> id 1
+POST {{baseUrl}}/workshops
+Content-Type: {{contentType}}
+
+{
+  "workshop": {
+    "title": "Intro to Rails",
+    "description": "Hands-on introduction to Rails APIs",
+    "topic": "backend"
+  }
+}
+
+### List workshops (active only)
+GET {{baseUrl}}/workshops
+
+### 2. Create a session for workshop 1 with capacity 1, so a second registration will waitlist -> id 1
+POST {{baseUrl}}/workshops/1/sessions
+Content-Type: {{contentType}}
+
+{
+  "session": {
+    "starts_at": "2026-08-01T10:00:00Z",
+    "ends_at": "2026-08-01T12:00:00Z",
+    "capacity": 1
+  }
+}
+
+### List sessions
+GET {{baseUrl}}/sessions
+
+### Filter sessions by workshop_id
+GET {{baseUrl}}/sessions?workshop_id=1
+
+### Show the session
+GET {{baseUrl}}/sessions/1
+
+### Session availability -> 0 held, 0 confirmed, 0 waitlisted, 1 available
+GET {{baseUrl}}/sessions/1/availability
+
 ### 3. Create attendees
 # @name createAttendeeA
 POST {{baseUrl}}/attendees
@@ -35,13 +74,24 @@ GET {{baseUrl}}/attendees
 GET {{baseUrl}}/attendees/1
 
 ### 4. Register attendee A for the session -> should be held
-# @name registerA
-POST {{baseUrl}}/workshops/2/sessions/1/registrations
+POST {{baseUrl}}/workshops/1/sessions/1/registrations
 Content-Type: {{contentType}}
 
 {
-  "registration": {
-    "attendee_id": 2
+  "attendee": {
+    "name": "Alex Attendee",
+    "email": "alex@example.com"
+  }
+}
+
+### 5. Register attendee B for the same session -> seat already taken, should be waitlisted
+POST {{baseUrl}}/workshops/1/sessions/1/registrations
+Content-Type: {{contentType}}
+
+{
+  "attendee": {
+    "name": "Blair Backup",
+    "email": "blair@example.com"
   }
 }
 
@@ -68,3 +118,40 @@ GET {{baseUrl}}/workshops/1/sessions/1/registrations/2
 
 ### Confirm attendee B's promoted registration
 POST {{baseUrl}}/workshops/1/sessions/1/registrations/2/confirm
+
+### 8. Cancel the whole session -> transitions the session to cancelled, bulk-cancels attendee B's confirmed
+### registration, returns a summary of registrations cancelled per prior status, and enqueues a notification
+### job for every held/confirmed attendee affected
+POST {{baseUrl}}/sessions/1/cancel
+Content-Type: {{contentType}}
+
+{
+  "cancellation_reason": "Instructor unavailable"
+}
+
+### Cancelling the session again is idempotent -> same status/reason, zero additional registrations cancelled
+POST {{baseUrl}}/sessions/1/cancel
+Content-Type: {{contentType}}
+
+{
+  "cancellation_reason": "Instructor unavailable"
+}
+
+### Cancelling without a reason is rejected
+POST {{baseUrl}}/sessions/1/cancel
+Content-Type: {{contentType}}
+
+{
+  "cancellation_reason": ""
+}
+
+### New registrations against the cancelled session are rejected with a consistent conflict response
+POST {{baseUrl}}/workshops/1/sessions/1/registrations
+Content-Type: {{contentType}}
+
+{
+  "attendee": {
+    "name": "Casey Cancelled",
+    "email": "casey@example.com"
+  }
+}
