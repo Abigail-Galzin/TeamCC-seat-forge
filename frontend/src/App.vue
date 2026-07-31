@@ -12,7 +12,7 @@ const toggleDarkMode = () => {
 
 const items = ref([
   {
-    label: 'Home',
+    label: 'Dashboard',
     icon: 'pi pi-home',
     command: () => router.push({ name: 'dashboard' })
   },
@@ -35,11 +35,6 @@ const items = ref([
     label: 'My registrations',
     icon: 'pi pi-user',
     command: () => router.push({ name: 'attendee-history' })
-  },
-  {
-    label: 'Component Catalog',
-    icon: 'pi pi-th-large',
-    command: () => router.push({ name: 'components-guide' })
   }
 ])
 </script>

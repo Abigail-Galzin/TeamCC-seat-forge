@@ -1,6 +1,13 @@
 class Workshop < ApplicationRecord
   has_many :sessions, dependent: :destroy
 
+  def current_or_next_session
+    now = Time.current
+
+    sessions.scheduled.where("starts_at <= ? AND ends_at >= ?", now, now).first ||
+      sessions.scheduled.where("starts_at > ?", now).order(:starts_at).first
+  end
+
   validates :title, presence: true, length: { minimum: 3, maximum: 150 }
   validates :topic, presence: true, length: { minimum: 2, maximum: 100 }
   validates :active, inclusion: { in: [true, false] }

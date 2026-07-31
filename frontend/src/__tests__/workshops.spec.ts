@@ -354,45 +354,99 @@ describe('getRegistrationHistoryByEmail', () => {
   })
 })
 
-describe('getDashboardMetrics', () => {
-  it('computes metrics from the current state', async () => {
-    const metrics = await dashboard.getDashboardMetrics()
+describe('getDashboardWorkshops', () => {
+  it('fetches and maps active workshops with their current/next session', async () => {
+    const mockResponse = {
+      message: 'ok',
+      status: 'ok',
+      data: [
+        {
+          id: 1,
+          title: 'Rails APIs for Modern Teams',
+          topic: 'Rails',
+          description: 'desc',
+          current_session: {
+            id: 101,
+            starts_at: '2026-08-01T09:00:00Z',
+            ends_at: '2026-08-01T11:00:00Z',
+            capacity: 3,
+            available_seats: 2,
+            in_progress: false,
+          },
+        },
+        {
+          id: 2,
+          title: 'No Sessions Workshop',
+          topic: 'Vue',
+          description: 'desc',
+          current_session: null,
+        },
+      ],
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: mockResponse })
 
-    expect(metrics).toMatchObject({
-      upcomingSessions: 3,
-      heldRegistrations: 1,
-      confirmedRegistrations: 1,
-      waitlistedRegistrations: 1,
-      expiredHolds: 0,
-      fullSessions: 0,
-    })
-    expect(metrics.topWaitlistedSessions).toEqual([
-      { id: 102, title: 'Rails APIs for Modern Teams', waitlistSize: 1 },
+    const result = await dashboard.getDashboardWorkshops()
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/dashboard')
+    expect(result).toEqual([
+      {
+        id: 1,
+        title: 'Rails APIs for Modern Teams',
+        topic: 'Rails',
+        description: 'desc',
+        currentSession: {
+          id: 101,
+          startsAt: '2026-08-01T09:00:00Z',
+          endsAt: '2026-08-01T11:00:00Z',
+          capacity: 3,
+          availableSeats: 2,
+          inProgress: false,
+        },
+      },
+      {
+        id: 2,
+        title: 'No Sessions Workshop',
+        topic: 'Vue',
+        description: 'desc',
+        currentSession: null,
+      },
     ])
   })
+})
 
-  it('reflects newly full sessions and re-sorts waitlisted sessions by size', async () => {
-    await registrations.createRegistration({
-      attendeeName: 'Filler',
-      attendeeEmail: 'filler@example.com',
-      sessionId: 103,
-    })
-    await registrations.createRegistration({
-      attendeeName: 'Waitlisted 1',
-      attendeeEmail: 'w1@example.com',
-      sessionId: 103,
-    })
-    await registrations.createRegistration({
-      attendeeName: 'Waitlisted 2',
-      attendeeEmail: 'w2@example.com',
-      sessionId: 103,
-    })
+describe('getWorkshopDashboardMetrics', () => {
+  it('fetches and maps a single workshop dashboard metrics payload', async () => {
+    const mockResponse = {
+      message: 'ok',
+      status: 'ok',
+      data: {
+        workshop_id: 1,
+        workshop_title: 'Rails APIs for Modern Teams',
+        upcoming_sessions: 2,
+        held_registrations: 1,
+        confirmed_registrations: 3,
+        waitlisted_registrations: 1,
+        expired_holds_today: 0,
+        full_sessions: 1,
+        top_waitlisted_sessions: [{ session_id: 102, starts_at: '2026-08-02T15:00:00Z', waitlist_size: 1 }],
+      },
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: mockResponse })
 
-    const metrics = await dashboard.getDashboardMetrics()
+    const metrics = await dashboard.getWorkshopDashboardMetrics(1)
 
-    expect(metrics.fullSessions).toBe(1)
-    expect(metrics.topWaitlistedSessions[0]).toMatchObject({ id: 103, waitlistSize: 2 })
-    expect(metrics.topWaitlistedSessions.length).toBeLessThanOrEqual(3)
+    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops/1/dashboard')
+    expect(metrics).toEqual({
+      workshopId: 1,
+      workshopTitle: 'Rails APIs for Modern Teams',
+      upcomingSessions: 2,
+      heldRegistrations: 1,
+      confirmedRegistrations: 3,
+      waitlistedRegistrations: 1,
+      expiredHoldsToday: 0,
+      fullSessions: 1,
+      topWaitlistedSessions: [{ sessionId: 102, startsAt: '2026-08-02T15:00:00Z', waitlistSize: 1 }],
+    })
   })
 })
 

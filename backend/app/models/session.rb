@@ -33,6 +33,11 @@ class Session < ApplicationRecord
     [capacity - confirmed_seats, 0].max
   end
 
+  def in_progress?
+    now = Time.current
+    starts_at <= now && ends_at >= now
+  end
+
   private
 
   def starts_at_and_ends_at_are_valid_iso8601
