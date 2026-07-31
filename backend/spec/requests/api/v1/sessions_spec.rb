@@ -69,6 +69,20 @@ RSpec.describe "Api::V1::Sessions", type: :request do
       )
     end
 
+    it "includes a null cancellation_reason for a scheduled session and the real reason for a cancelled one" do
+      scheduled = create(:session)
+      cancelled = create(:session)
+      cancelled.cancel("Instructor unavailable")
+
+      get "/api/v1/sessions"
+
+      json = response.parsed_body
+      scheduled_record = json["data"].find { |s| s["id"] == scheduled.id }
+      cancelled_record = json["data"].find { |s| s["id"] == cancelled.id }
+      expect(scheduled_record["cancellation_reason"]).to be_nil
+      expect(cancelled_record["cancellation_reason"]).to eq("Instructor unavailable")
+    end
+
     it "paginates using per_page" do
       create_list(:session, 3)
 
@@ -89,6 +103,16 @@ RSpec.describe "Api::V1::Sessions", type: :request do
       json = response.parsed_body
       expect(response).to have_http_status(:ok)
       expect(json["data"]["id"]).to eq(session.id)
+    end
+
+    it "includes the cancellation reason for a cancelled session" do
+      session = create(:session)
+      session.cancel("Instructor unavailable")
+
+      get "/api/v1/sessions/#{session.id}"
+
+      json = response.parsed_body
+      expect(json["data"]["cancellation_reason"]).to eq("Instructor unavailable")
     end
   end
 

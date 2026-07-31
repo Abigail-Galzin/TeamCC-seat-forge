@@ -147,6 +147,9 @@ onMounted(async () => {
         <Column header="Status">
           <template #body="{ data }">
             <Badge :value="data.status" :severity="data.status === 'scheduled' ? 'success' : 'secondary'" />
+            <p v-if="data.status === 'cancelled' && data.cancellationReason" class="cancellation-reason">
+              {{ data.cancellationReason }}
+            </p>
           </template>
         </Column>
         <Column header="Available seats">
@@ -188,4 +191,5 @@ onMounted(async () => {
 
 .load-error { margin-bottom: 1rem; }
 .sessions-table-wrapper { overflow-x: auto; }
+.cancellation-reason { margin: 0.35rem 0 0; color: #64748b; font-size: 0.85rem; max-width: 16rem; }
 </style>

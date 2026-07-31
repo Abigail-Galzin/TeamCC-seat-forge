@@ -320,6 +320,7 @@ describe('getSessionById', () => {
           ends_at: '2026-08-01T11:00:00.000Z',
           capacity: 3,
           status: 'scheduled',
+          cancellation_reason: null,
         },
       },
     })
@@ -337,6 +338,27 @@ describe('getSessionById', () => {
     })
   })
 
+  it('maps a present cancellation_reason to cancellationReason', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: {
+        data: {
+          id: 101,
+          workshop_id: 1,
+          workshop_title: 'Rails APIs for Modern Teams',
+          starts_at: '2026-08-01T09:00:00.000Z',
+          ends_at: '2026-08-01T11:00:00.000Z',
+          capacity: 3,
+          status: 'cancelled',
+          cancellation_reason: 'Instructor unavailable',
+        },
+      },
+    })
+
+    const session = await sessions.getSessionById(101)
+
+    expect(session?.cancellationReason).toBe('Instructor unavailable')
+  })
+
   it('returns undefined for an unknown session', async () => {
     const axiosError = Object.assign(new Error('Not Found'), { isAxiosError: true, response: { status: 404, data: {} } })
     vi.spyOn(api.apiClient, 'get').mockRejectedValue(axiosError)
@@ -344,6 +366,46 @@ describe('getSessionById', () => {
 
     const session = await sessions.getSessionById(999999)
     expect(session).toBeUndefined()
+  })
+})
+
+describe('cancelSession', () => {
+  it('posts the cancellation reason and returns the mapped result', async () => {
+    vi.spyOn(api.apiClient, 'post').mockResolvedValue({
+      data: {
+        data: {
+          session_id: 101,
+          status: 'cancelled',
+          cancellation_reason: 'Instructor unavailable',
+          cancelled_registrations: { held: 2, confirmed: 1, waitlisted: 0 },
+        },
+      },
+    })
+
+    const result = await sessions.cancelSession(101, 'Instructor unavailable')
+
+    expect(api.apiClient.post).toHaveBeenCalledWith('/sessions/101/cancel', {
+      cancellation_reason: 'Instructor unavailable',
+    })
+    expect(result).toEqual({
+      sessionId: 101,
+      status: 'cancelled',
+      cancellationReason: 'Instructor unavailable',
+      cancelledRegistrations: { held: 2, confirmed: 1, waitlisted: 0 },
+    })
+  })
+
+  it('propagates a validation error for a blank cancellation reason', async () => {
+    const axiosError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: {
+        status: 422,
+        data: { error: { code: 'validation_error', message: 'A cancellation reason is required', details: [] } },
+      },
+    })
+    vi.spyOn(api.apiClient, 'post').mockRejectedValue(axiosError)
+
+    await expect(sessions.cancelSession(101, '')).rejects.toBe(axiosError)
   })
 })
 

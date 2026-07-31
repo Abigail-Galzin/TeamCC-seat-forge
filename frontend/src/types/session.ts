@@ -7,6 +7,7 @@ export interface Session {
   endsAt: string
   capacity: number
   status: 'scheduled' | 'cancelled' | 'completed'
+  cancellationReason?: string
 }
 
 export interface CreateSessionPayload {
@@ -59,6 +60,7 @@ export interface SessionApiRecord {
   ends_at: string
   capacity: number
   status: 'scheduled' | 'cancelled' | 'completed'
+  cancellation_reason: string | null
 }
 
 export interface SessionListApiRecord extends SessionApiRecord {

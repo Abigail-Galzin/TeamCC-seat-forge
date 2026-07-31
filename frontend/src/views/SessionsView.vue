@@ -23,10 +23,12 @@ const selectedSessionId = ref<number | null>(null)
 const submitting = ref(false)
 
 const sessionOptions = computed(() =>
-  sessions.value.map((session) => ({
-    label: `${new Date(session.startsAt).toLocaleString()} · Capacity ${session.capacity}`,
-    value: session.id,
-  })),
+  sessions.value
+    .filter((session) => session.status === 'scheduled')
+    .map((session) => ({
+      label: `${new Date(session.startsAt).toLocaleString()} · Capacity ${session.capacity}`,
+      value: session.id,
+    })),
 )
 
 onMounted(async () => {
