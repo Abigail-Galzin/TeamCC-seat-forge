@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import axios from 'axios'
 import type * as WorkshopsService from '../services/workshops'
 import type * as SessionsService from '../services/sessions'
 import type * as AttendeesService from '../services/attendees'
@@ -21,6 +22,10 @@ beforeEach(async () => {
   registrations = await import('../services/registrations')
   dashboard = await import('../services/dashboard')
   api = await import('../services/api')
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 describe('getWorkshops', () => {
@@ -193,6 +198,106 @@ describe('createAttendee', () => {
   })
 })
 
+describe('getAttendeeByIdFromApi', () => {
+  it('returns the attendee', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: { data: { id: 7, name: 'Ana García', email: 'ana@example.com' } },
+    })
+
+    const result = await attendees.getAttendeeByIdFromApi(7)
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/attendees/7')
+    expect(result).toEqual({ id: 7, name: 'Ana García', email: 'ana@example.com' })
+  })
+
+  it('returns undefined on a 404', async () => {
+    const axiosError = Object.assign(new Error('Not Found'), { isAxiosError: true, response: { status: 404, data: {} } })
+    vi.spyOn(api.apiClient, 'get').mockRejectedValue(axiosError)
+    vi.spyOn(axios, 'isAxiosError').mockReturnValue(true)
+
+    const result = await attendees.getAttendeeByIdFromApi(999999)
+
+    expect(result).toBeUndefined()
+  })
+
+  it('re-throws non-404 errors', async () => {
+    const axiosError = Object.assign(new Error('Server error'), { isAxiosError: true, response: { status: 500, data: {} } })
+    vi.spyOn(api.apiClient, 'get').mockRejectedValue(axiosError)
+    vi.spyOn(axios, 'isAxiosError').mockReturnValue(true)
+
+    await expect(attendees.getAttendeeByIdFromApi(7)).rejects.toBe(axiosError)
+  })
+})
+
+describe('getAttendeeRegistrationsFromApi', () => {
+  it('fetches a page of the attendee\'s registrations and maps session/workshop details', async () => {
+    const responseBody = {
+      message: 'Registrations returned correctly',
+      status: 'ok',
+      data: [
+        {
+          id: 42,
+          status: 'confirmed',
+          hold_expires_at: null,
+          confirmed_at: '2026-07-29T10:00:00.000Z',
+          cancelled_at: null,
+          session: {
+            id: 101,
+            starts_at: '2026-08-01T09:00:00.000Z',
+            ends_at: '2026-08-01T11:00:00.000Z',
+            capacity: 5,
+            status: 'scheduled',
+            workshop: { id: 1, title: 'Rails APIs for Modern Teams', topic: 'Rails' },
+          },
+        },
+      ],
+      pagination: { page: 1, pages: 1, count: 1, limit: 10, next: null, prev: null },
+      status_counts: { held: 0, confirmed: 1, waitlisted: 0, cancelled: 0, expired: 0 },
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: responseBody })
+
+    const result = await attendees.getAttendeeRegistrationsFromApi(7)
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/attendees/7/registrations', { params: { page: 1, per_page: 10 } })
+    expect(result.data).toEqual([
+      {
+        id: 42,
+        status: 'confirmed',
+        holdExpiresAt: undefined,
+        confirmedAt: '2026-07-29T10:00:00.000Z',
+        cancelledAt: undefined,
+        session: {
+          id: 101,
+          startsAt: '2026-08-01T09:00:00.000Z',
+          endsAt: '2026-08-01T11:00:00.000Z',
+          capacity: 5,
+          status: 'scheduled',
+          workshop: { id: 1, title: 'Rails APIs for Modern Teams', topic: 'Rails' },
+        },
+      },
+    ])
+    expect(result.pagination).toEqual(responseBody.pagination)
+    expect(result.statusCounts).toEqual({ held: 0, confirmed: 1, waitlisted: 0, cancelled: 0, expired: 0 })
+  })
+
+  it('handles a missing session gracefully', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: {
+        message: null,
+        status: 'ok',
+        data: [{ id: 1, status: 'cancelled', hold_expires_at: null, confirmed_at: null, cancelled_at: null, session: null }],
+        pagination: { page: 1, pages: 1, count: 1, limit: 10, next: null, prev: null },
+        status_counts: { held: 0, confirmed: 0, waitlisted: 0, cancelled: 1, expired: 0 },
+      },
+    })
+
+    const result = await attendees.getAttendeeRegistrationsFromApi(7)
+
+    expect(result.data).toEqual([{ id: 1, status: 'cancelled', holdExpiresAt: undefined, confirmedAt: undefined, cancelledAt: undefined, session: undefined }])
+    expect(result.statusCounts).toEqual({ held: 0, confirmed: 0, waitlisted: 0, cancelled: 1, expired: 0 })
+  })
+})
+
 describe('getSessionAttendeeStatuses', () => {
   it('returns attendee info and status for each registration', async () => {
     const statuses = await sessions.getSessionAttendeeStatuses(101)
@@ -208,6 +313,49 @@ describe('getSessionAttendeeStatuses', () => {
   it('returns an empty list for a session with no registrations', async () => {
     const statuses = await sessions.getSessionAttendeeStatuses(103)
     expect(statuses).toEqual([])
+  })
+})
+
+describe('getSessionAttendeesFromApi', () => {
+  it('fetches a page of attendees from the backend and maps attendee details', async () => {
+    const responseBody = {
+      message: 'Registrations returned correctly',
+      status: 'ok',
+      data: [
+        { id: 1, status: 'confirmed', attendee: { id: 1, name: 'Ana García', email: 'ana@example.com' } },
+        { id: 2, status: 'held', attendee: { id: 2, name: 'Luis Pérez', email: 'luis@example.com' } },
+      ],
+      pagination: { page: 1, pages: 2, count: 12, limit: 10, next: 2, prev: null },
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: responseBody })
+
+    const result = await sessions.getSessionAttendeesFromApi(1, 101, 1, 10)
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops/1/sessions/101/registrations', {
+      params: { page: 1, per_page: 10 },
+    })
+    expect(result.data).toEqual([
+      { attendeeId: 1, name: 'Ana García', email: 'ana@example.com', status: 'confirmed' },
+      { attendeeId: 2, name: 'Luis Pérez', email: 'luis@example.com', status: 'held' },
+    ])
+    expect(result.pagination).toEqual(responseBody.pagination)
+  })
+
+  it('falls back to placeholder attendee details when the attendee is missing', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: {
+        message: null,
+        status: 'ok',
+        data: [{ id: 1, status: 'cancelled', attendee: null }],
+        pagination: { page: 1, pages: 1, count: 1, limit: 10, next: null, prev: null },
+      },
+    })
+
+    const result = await sessions.getSessionAttendeesFromApi(1, 101)
+
+    expect(result.data).toEqual([
+      { attendeeId: 0, name: 'Unknown attendee', email: 'unknown@example.com', status: 'cancelled' },
+    ])
   })
 })
 
@@ -354,6 +502,120 @@ describe('getRegistrationHistoryByEmail', () => {
   })
 })
 
+describe('reserveSeatFromApi', () => {
+  it('ensures the attendee exists, then posts the attendee identity under the workshop/session and maps the created registration', async () => {
+    const registrationRecord = {
+      id: 55,
+      attendee_id: 9,
+      session_id: 101,
+      status: 'held',
+      hold_expires_at: '2026-07-29T18:10:00.000Z',
+      confirmed_at: null,
+      cancelled_at: null,
+    }
+    vi.spyOn(api.apiClient, 'post').mockImplementation((url) => {
+      if (url === '/attendees') return Promise.resolve({ data: { data: { id: 9 } } })
+      return Promise.resolve({ data: { data: registrationRecord } })
+    })
+
+    const result = await registrations.reserveSeatFromApi(1, {
+      attendeeName: 'New Attendee',
+      attendeeEmail: 'new-attendee@example.com',
+      sessionId: 101,
+    })
+
+    expect(api.apiClient.post).toHaveBeenCalledWith('/attendees', {
+      attendee: { name: 'New Attendee', email: 'new-attendee@example.com' },
+    })
+    expect(api.apiClient.post).toHaveBeenCalledWith('/workshops/1/sessions/101/registrations', {
+      attendee: { name: 'New Attendee', email: 'new-attendee@example.com' },
+    })
+    expect(result).toEqual({
+      id: 55,
+      attendeeId: 9,
+      sessionId: 101,
+      status: 'held',
+      holdExpiresAt: '2026-07-29T18:10:00.000Z',
+      confirmedAt: undefined,
+      cancelledAt: undefined,
+    })
+  })
+
+  it('treats a duplicate-email conflict from attendee creation as success and still registers', async () => {
+    const duplicateEmailError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: {
+        status: 422,
+        data: { error: { code: 'creation_conflict', message: 'Could not create.', details: ['Email has already been taken'] } },
+      },
+    })
+    const registrationRecord = {
+      id: 56,
+      attendee_id: 3,
+      session_id: 101,
+      status: 'held',
+      hold_expires_at: '2026-07-29T18:10:00.000Z',
+      confirmed_at: null,
+      cancelled_at: null,
+    }
+    vi.spyOn(api.apiClient, 'post').mockImplementation((url) => {
+      if (url === '/attendees') return Promise.reject(duplicateEmailError)
+      return Promise.resolve({ data: { data: registrationRecord } })
+    })
+
+    const result = await registrations.reserveSeatFromApi(1, {
+      attendeeName: 'Existing Person',
+      attendeeEmail: 'existing@example.com',
+      sessionId: 101,
+    })
+
+    expect(result.id).toBe(56)
+  })
+
+  it('propagates a genuine attendee validation error without attempting to register', async () => {
+    const validationError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: {
+        status: 422,
+        data: { error: { code: 'creation_conflict', message: 'Could not create.', details: ['Email is invalid'] } },
+      },
+    })
+    vi.spyOn(api.apiClient, 'post').mockRejectedValue(validationError)
+
+    await expect(
+      registrations.reserveSeatFromApi(1, {
+        attendeeName: 'A',
+        attendeeEmail: 'not-an-email',
+        sessionId: 101,
+      }),
+    ).rejects.toBe(validationError)
+
+    expect(api.apiClient.post).toHaveBeenCalledTimes(1)
+  })
+
+  it('propagates backend conflicts from registration as axios errors', async () => {
+    const axiosError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: {
+        status: 422,
+        data: { error: { code: 'creation_conflict', message: 'Already registered.', details: [] } },
+      },
+    })
+    vi.spyOn(api.apiClient, 'post').mockImplementation((url) => {
+      if (url === '/attendees') return Promise.resolve({ data: { data: { id: 1 } } })
+      return Promise.reject(axiosError)
+    })
+
+    await expect(
+      registrations.reserveSeatFromApi(1, {
+        attendeeName: 'Ana García',
+        attendeeEmail: 'ana@example.com',
+        sessionId: 101,
+      }),
+    ).rejects.toBe(axiosError)
+  })
+})
+
 describe('getDashboardMetrics', () => {
   it('computes metrics from the current state', async () => {
     const metrics = await dashboard.getDashboardMetrics()
@@ -407,3 +669,4 @@ describe('getWorkshopsFromApi', () => {
     expect(api.apiClient.get).toHaveBeenCalledWith('/workshops')
   })
 })
+

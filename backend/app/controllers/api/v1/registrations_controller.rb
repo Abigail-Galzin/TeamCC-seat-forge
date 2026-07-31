@@ -3,12 +3,19 @@ class Api::V1::RegistrationsController < ApplicationController
   before_action :set_session
   before_action :set_registration, only: [ :show, :confirm, :cancel ]
 
-  # GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations
+  # GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations?page=1&per_page=10
+  # Lists the attendees selected (registered) for the session, paginated, most recent first.
   def index
-    @pagy, @registrations = pagy(@session.registrations)
+    @pagy, @registrations = pagy(
+      @session.registrations.includes(:attendee).order(created_at: :desc),
+      items: per_page
+    )
 
     resp = Response::ResponseData.new(
-      data: @registrations.as_json(except: [ :created_at, :updated_at ]),
+      data: @registrations.as_json(
+        except: [ :created_at, :updated_at ],
+        include: { attendee: { only: [ :id, :name, :email ] } }
+      ),
       message: I18n.t('success.response', model: Registration.model_name.human.pluralize)
     )
     render json: resp.as_json.merge(Response::ResponsePaginationInfo.new(@pagy).as_json), status: resp.status
@@ -91,6 +98,13 @@ class Api::V1::RegistrationsController < ApplicationController
 
   private
 
+  def per_page
+    requested = params[:per_page].presence&.to_i
+    return Pagy::DEFAULT[:items] if requested.blank? || requested < 1
+
+    [ requested, Pagy::DEFAULT[:items] ].min
+  end
+
   def set_workshop
     @workshop = Workshop.find(params[:workshop_id])
   rescue ActiveRecord::RecordNotFound
@@ -109,13 +123,14 @@ class Api::V1::RegistrationsController < ApplicationController
     render json: { error: I18n.t('errors.response_not_found', model: 'Registration') }, status: :not_found
   end
 
-  def registration_params
-    params.require(:registration).permit(:attendee_id)
+  def attendee_params
+    params.require(:attendee).permit(:name, :email)
   end
 
   def find_attendee
-    Attendee.find(registration_params[:attendee_id])
-  rescue ActiveRecord::RecordNotFound
+    attendee = Attendee.find_by_email(attendee_params[:email])
+    return attendee if attendee
+
     render json: { error: I18n.t('errors.response_not_found', model: 'Attendee') }, status: :not_found
     nil
   end

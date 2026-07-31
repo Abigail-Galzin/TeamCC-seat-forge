@@ -2,12 +2,12 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getWorkshops } from '../services/workshops'
-import { getErrorMessage } from '../services/api'
+import { getErrorMessage, DEFAULT_PAGE_SIZE } from '../services/api'
 import type { PaginatedResult } from '../types/pagination'
 import type { Workshop } from '../types/workshop'
 
 const router = useRouter()
-const perPage = 5
+const perPage = DEFAULT_PAGE_SIZE
 const workshops = ref<PaginatedResult<Workshop>>({
   message: null,
   data: [],

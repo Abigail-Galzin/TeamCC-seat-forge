@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getSessions, DEFAULT_SESSIONS_PER_PAGE } from '../services/sessions'
+import { getSessions } from '../services/sessions'
 import { getWorkshopTopics } from '../services/workshops'
-import { getErrorMessage } from '../services/api'
+import { getErrorMessage, DEFAULT_PAGE_SIZE } from '../services/api'
 import type { PaginatedResult } from '../types/pagination'
 import type { SessionListItem, SessionSort } from '../types/session'
 
 const router = useRouter()
-const perPage = DEFAULT_SESSIONS_PER_PAGE
+const perPage = DEFAULT_PAGE_SIZE
 
 const sessions = ref<PaginatedResult<SessionListItem>>({
   message: null,

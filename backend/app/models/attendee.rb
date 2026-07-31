@@ -13,4 +13,12 @@ class Attendee < ApplicationRecord
     message: "must be a valid email address"
   }
 
+  def registration_status_counts
+    Registration.statuses.keys.index_with(0).merge(registrations.group(:status).count)
+  end
+
+  def self.find_by_email(email)
+    find_by("lower(email) = ?", email.to_s.strip.downcase)
+  end
+
 end

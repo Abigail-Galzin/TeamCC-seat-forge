@@ -1,9 +1,10 @@
 FactoryBot.define do
   factory :registration do
-    status { "MyString" }
-    hold_expires_at { "2026-07-29 17:02:47" }
-    confirmed_at { "2026-07-29 17:02:47" }
-    cancelled_at { "2026-07-29 17:02:47" }
-    Attendee { nil }
+    attendee
+    session
+    status { "held" }
+    hold_expires_at { 10.minutes.from_now }
+    confirmed_at { nil }
+    cancelled_at { nil }
   end
 end

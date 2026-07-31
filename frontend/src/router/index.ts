@@ -49,7 +49,7 @@ const router = createRouter({
       component: () => import('../views/SessionsNewView.vue'),
     },
     {
-      path: '/sessions/:sessionId/attendees',
+      path: '/workshops/:workshopId/sessions/:sessionId/attendees',
       name: 'admin-session-attendees',
       component: () => import('../views/SessionAttendeesView.vue'),
     },

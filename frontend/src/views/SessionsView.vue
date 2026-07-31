@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { getSessionsForWorkshop } from '../services/sessions'
 import { getWorkshopById } from '../services/workshops'
-import { createRegistration } from '../services/registrations'
+import { reserveSeatFromApi } from '../services/registrations'
 import { getErrorMessage } from '../services/api'
 import type { Session } from '../types/session'
 import type { Workshop } from '../types/workshop'
@@ -42,6 +42,11 @@ onMounted(async () => {
 })
 
 async function reserveSeat() {
+  if (!attendeeName.value || !attendeeEmail.value) {
+    toast.add({ severity: 'warn', summary: 'Missing details', detail: 'Please enter your name and email.', life: 3000 })
+    return
+  }
+
   if (!selectedSessionId.value) {
     toast.add({ severity: 'warn', summary: 'Missing session', detail: 'Please choose a session.', life: 3000 })
     return
@@ -49,7 +54,7 @@ async function reserveSeat() {
 
   submitting.value = true
   try {
-    const registration = await createRegistration({
+    const registration = await reserveSeatFromApi(workshopId, {
       attendeeName: attendeeName.value,
       attendeeEmail: attendeeEmail.value,
       sessionId: selectedSessionId.value,

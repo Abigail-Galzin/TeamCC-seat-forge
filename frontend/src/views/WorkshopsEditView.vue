@@ -61,8 +61,7 @@ async function submit() {
         <h1>Edit workshop</h1>
       </div>
       <Button
-        label="Back to workshops"
-        icon="pi pi-angle-left"
+        label="Back"
         severity="primary"
         variant="outlined"
         @click="router.push({ name: 'admin-workshops' })"
