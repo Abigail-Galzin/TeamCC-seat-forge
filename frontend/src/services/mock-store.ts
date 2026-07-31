@@ -1,8 +1,6 @@
 import type { Workshop } from '../types/workshop'
 import type { Session } from '../types/session'
-import type { Attendee } from '../types/attendee'
 import type { Registration } from '../types/registration'
-import type { PaginatedResult } from '../types/pagination'
 
 const initialWorkshops: Workshop[] = [
   {
@@ -55,11 +53,6 @@ const initialSessions: Session[] = [
   },
 ]
 
-const initialAttendees: Attendee[] = [
-  { id: 1, name: 'Ana García', email: 'ana@example.com' },
-  { id: 2, name: 'Luis Pérez', email: 'luis@example.com' },
-]
-
 const initialRegistrations: Registration[] = [
   { id: 5001, attendeeId: 1, sessionId: 101, status: 'confirmed' },
   { id: 5002, attendeeId: 2, sessionId: 101, status: 'held' },
@@ -68,53 +61,10 @@ const initialRegistrations: Registration[] = [
 
 export const workshopStore: Workshop[] = [...initialWorkshops]
 export const sessionStore: Session[] = [...initialSessions]
-export const attendeeStore: Attendee[] = [...initialAttendees]
 export const registrationStore: Registration[] = [...initialRegistrations]
-
-let workshopIdCounter = Math.max(...initialWorkshops.map((workshop) => workshop.id)) + 1
-let sessionIdCounter = Math.max(...initialSessions.map((session) => session.id)) + 1
-let attendeeIdCounter = Math.max(...initialAttendees.map((attendee) => attendee.id)) + 1
-let registrationIdCounter = Math.max(...initialRegistrations.map((registration) => registration.id)) + 1
-
-export function nextWorkshopId(): number {
-  return workshopIdCounter++
-}
-
-export function nextSessionId(): number {
-  return sessionIdCounter++
-}
-
-export function nextAttendeeId(): number {
-  return attendeeIdCounter++
-}
-
-export function nextRegistrationId(): number {
-  return registrationIdCounter++
-}
 
 export function getActiveRegistrationsForSession(sessionId: number): Registration[] {
   return registrationStore.filter(
     (registration) => registration.sessionId === sessionId && ['held', 'confirmed'].includes(registration.status),
   )
-}
-
-export function paginateMock<T>(all: T[], page: number, perPage: number): PaginatedResult<T> {
-  const count = all.length
-  const pages = Math.max(1, Math.ceil(count / perPage))
-  const start = (page - 1) * perPage
-  const data = all.slice(start, start + perPage)
-
-  return {
-    message: null,
-    data,
-    status: 'ok',
-    pagination: {
-      page,
-      pages,
-      count,
-      limit: perPage,
-      next: page < pages ? page + 1 : null,
-      prev: page > 1 ? page - 1 : null,
-    },
-  }
 }

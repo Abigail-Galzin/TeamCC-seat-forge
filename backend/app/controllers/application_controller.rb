@@ -1,5 +1,6 @@
 class ApplicationController < ActionController::API
   include Pagy::Backend
+  include Paginatable
 
   rescue_from ActionController::ParameterMissing do |exception|
     response = Response::ResponseError.new(

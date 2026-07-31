@@ -27,6 +27,25 @@ RSpec.describe "Api::V1::Attendees", type: :request do
       expect(body["pagination"]["page"]).to eq(2)
     end
 
+    it "filters by an exact, case-insensitive email match" do
+      match = create(:attendee, name: "Ana", email: "ana@example.com")
+      create(:attendee, name: "Luis", email: "luis@example.com")
+
+      get "/api/v1/attendees", params: { email: "ANA@EXAMPLE.COM" }
+
+      body = JSON.parse(response.body)
+      expect(body["data"].map { |a| a["id"] }).to eq([ match.id ])
+    end
+
+    it "returns no results for an email that doesn't match any attendee" do
+      create(:attendee, email: "ana@example.com")
+
+      get "/api/v1/attendees", params: { email: "nobody@example.com" }
+
+      body = JSON.parse(response.body)
+      expect(body["data"]).to eq([])
+    end
+
     it "respects a valid per_page param, capped at the app-wide Pagy default" do
       15.times { create(:attendee) }
 

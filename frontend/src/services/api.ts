@@ -71,7 +71,13 @@ export async function checkBackendHealth(): Promise<BackendHealthResult> {
  */
 export function getErrorMessage(error: unknown, fallback = 'Unexpected error'): string {
   if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data?.error?.message || error.message || fallback
+    const apiError = error.response?.data?.error
+    if (apiError?.message) {
+      const details = apiError.details?.filter((detail): detail is string => typeof detail === 'string')
+      return details?.length ? `${apiError.message}: ${details.join(', ')}` : apiError.message
+    }
+
+    return error.message || fallback
   }
 
   if (error instanceof Error) {

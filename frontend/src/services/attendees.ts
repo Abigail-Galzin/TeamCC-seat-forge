@@ -1,35 +1,17 @@
 import axios from 'axios'
-import { attendeeStore, nextAttendeeId } from './mock-store'
 import { apiClient, DEFAULT_PAGE_SIZE } from './api'
 import type { Attendee, AttendeeRegistrationApiRecord, AttendeeRegistrationsResult } from '../types/attendee'
 import type { ApiErrorBody } from '../types/api-error'
 import type { PaginationInfo } from '../types/pagination'
 import type { RegistrationStatusCounts } from '../types/registration'
 
-export async function getAttendees(): Promise<Attendee[]> {
-  await Promise.resolve()
-  return [...attendeeStore]
-}
-
-export async function getAttendeeByEmail(email: string): Promise<Attendee | undefined> {
-  await Promise.resolve()
-  return attendeeStore.find((attendee) => attendee.email.toLowerCase() === email.toLowerCase())
-}
-
-export async function createAttendee(name: string, email: string): Promise<Attendee> {
-  const existing = attendeeStore.find((attendee) => attendee.email.toLowerCase() === email.toLowerCase())
-  if (existing) {
-    return existing
-  }
-
-  const attendee: Attendee = {
-    id: nextAttendeeId(),
-    name,
-    email,
-  }
-
-  attendeeStore.unshift(attendee)
-  return attendee
+/**
+ * Finds an attendee by exact, case-insensitive email match (GET /api/v1/attendees?email=...).
+ * Returns undefined when no attendee has that email.
+ */
+export async function getAttendeeByEmailFromApi(email: string): Promise<Attendee | undefined> {
+  const response = await apiClient.get<{ data: Attendee[] }>('/attendees', { params: { email } })
+  return response.data.data[0]
 }
 
 /**

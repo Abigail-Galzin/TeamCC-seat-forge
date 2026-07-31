@@ -29,112 +29,257 @@ afterEach(() => {
 })
 
 describe('getWorkshops', () => {
-  it('returns only active workshops that have at least one session by default', async () => {
+  it('requests active workshops by default', async () => {
+    const responseBody = {
+      message: 'Workshops returned correctly',
+      status: 'ok',
+      data: [
+        { id: 1, title: 'Rails APIs for Modern Teams', description: '', topic: 'Rails', active: true },
+        { id: 2, title: 'Vue 3 Patterns for Product Teams', description: '', topic: 'Vue', active: true },
+      ],
+      pagination: { page: 1, pages: 1, count: 2, limit: 10, next: null, prev: null },
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: responseBody })
+
     const result = await workshops.getWorkshops()
 
-    expect(result.data.map((w) => w.id)).toEqual([1, 2])
-    expect(result.pagination.count).toBe(2)
-    expect(result.pagination.pages).toBe(1)
+    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops', { params: { active: true, page: 1, per_page: 10 } })
+    expect(result).toEqual(responseBody)
   })
 
-  it('includes inactive workshops when activeOnly is false', async () => {
-    const result = await workshops.getWorkshops(1, 5, false)
+  it('omits the active filter when activeOnly is false', async () => {
+    const responseBody = {
+      message: null,
+      status: 'ok',
+      data: [],
+      pagination: { page: 2, pages: 3, count: 3, limit: 1, next: 3, prev: 1 },
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: responseBody })
 
-    expect(result.data).toHaveLength(3)
-    expect(result.pagination.count).toBe(3)
-  })
-
-  it('paginates results', async () => {
     const result = await workshops.getWorkshops(2, 1, false)
 
-    expect(result.data).toHaveLength(1)
-    expect(result.pagination.page).toBe(2)
-    expect(result.pagination.limit).toBe(1)
-    expect(result.pagination.pages).toBe(3)
-    expect(result.pagination.next).toBe(3)
-    expect(result.pagination.prev).toBe(1)
+    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops', {
+      params: { active: undefined, page: 2, per_page: 1 },
+    })
+    expect(result).toEqual(responseBody)
   })
 })
 
 describe('createWorkshop', () => {
-  it('creates a workshop and prepends it to the list', async () => {
-    const workshop = await workshops.createWorkshop({
-      title: 'Testing Workshop',
-      description: 'A test workshop',
-      topic: 'Testing',
-      active: true,
-    })
+  it('posts the payload and returns the created workshop', async () => {
+    const payload = { title: 'Testing Workshop', description: 'A test workshop', topic: 'Testing', active: true }
+    const created = { id: 9, ...payload }
+    vi.spyOn(api.apiClient, 'post').mockResolvedValue({ data: { data: created } })
 
-    expect(workshop).toMatchObject({
-      title: 'Testing Workshop',
-      topic: 'Testing',
-      active: true,
-    })
-    expect(workshop.id).toEqual(expect.any(Number))
+    const workshop = await workshops.createWorkshop(payload)
 
-    const all = await workshops.getWorkshops(1, 10, false)
-    expect(all.data[0]).toEqual(workshop)
+    expect(api.apiClient.post).toHaveBeenCalledWith('/workshops', { workshop: payload })
+    expect(workshop).toEqual(created)
   })
 })
 
 describe('getWorkshopById', () => {
   it('returns the matching workshop', async () => {
-    const workshop = await workshops.getWorkshopById(1)
-    expect(workshop?.title).toBe('Rails APIs for Modern Teams')
+    const workshop = { id: 1, title: 'Rails APIs for Modern Teams', description: '', topic: 'Rails', active: true }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: { data: workshop } })
+
+    const result = await workshops.getWorkshopById(1)
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops/1')
+    expect(result).toEqual(workshop)
   })
 
   it('returns undefined when not found', async () => {
+    const axiosError = Object.assign(new Error('Not Found'), { isAxiosError: true, response: { status: 404, data: {} } })
+    vi.spyOn(api.apiClient, 'get').mockRejectedValue(axiosError)
+    vi.spyOn(axios, 'isAxiosError').mockReturnValue(true)
+
     const workshop = await workshops.getWorkshopById(999999)
     expect(workshop).toBeUndefined()
   })
 })
 
 describe('updateWorkshop', () => {
-  it('updates an existing workshop', async () => {
-    const updated = await workshops.updateWorkshop(1, {
-      title: 'Updated title',
-      description: 'Updated description',
-      topic: 'Updated',
-      active: false,
-    })
+  it('patches the workshop and returns the updated record', async () => {
+    const payload = { title: 'Updated title', description: 'Updated description', topic: 'Updated', active: false }
+    const updated = { id: 1, ...payload }
+    vi.spyOn(api.apiClient, 'patch').mockResolvedValue({ data: { data: updated } })
 
-    expect(updated).toMatchObject({
-      id: 1,
-      title: 'Updated title',
-      active: false,
-    })
+    const result = await workshops.updateWorkshop(1, payload)
+
+    expect(api.apiClient.patch).toHaveBeenCalledWith('/workshops/1', { workshop: payload })
+    expect(result).toEqual(updated)
   })
 
-  it('throws when the workshop does not exist', async () => {
+  it('propagates backend errors', async () => {
+    const axiosError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: { status: 422, data: { error: { code: 'update_conflict', message: 'Could not update.', details: [] } } },
+    })
+    vi.spyOn(api.apiClient, 'patch').mockRejectedValue(axiosError)
+
     await expect(
-      workshops.updateWorkshop(999999, {
-        title: 'x',
-        description: 'x',
-        topic: 'x',
-        active: true,
-      }),
-    ).rejects.toThrow('Workshop not found')
+      workshops.updateWorkshop(999999, { title: 'x', description: 'x', topic: 'x', active: true }),
+    ).rejects.toBe(axiosError)
+  })
+})
+
+describe('getWorkshopTopics', () => {
+  it('returns the sorted, de-duplicated list of topics across all workshops', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: {
+        data: [
+          { id: 1, title: 'A', description: '', topic: 'Vue', active: true },
+          { id: 2, title: 'B', description: '', topic: 'Rails', active: true },
+          { id: 3, title: 'C', description: '', topic: 'Vue', active: false },
+        ],
+      },
+    })
+
+    const topics = await workshops.getWorkshopTopics()
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops', { params: { per_page: 10 } })
+    expect(topics).toEqual(['Rails', 'Vue'])
   })
 })
 
 describe('getSessionsForWorkshop', () => {
-  it('returns sessions for the given workshop', async () => {
+  it('fetches sessions filtered by workshop id and maps them from snake_case', async () => {
+    const responseBody = {
+      message: null,
+      status: 'ok',
+      data: [
+        {
+          id: 101,
+          workshop_id: 1,
+          workshop_title: 'Rails APIs for Modern Teams',
+          starts_at: '2026-08-01T09:00:00.000Z',
+          ends_at: '2026-08-01T11:00:00.000Z',
+          capacity: 3,
+          status: 'scheduled',
+        },
+      ],
+      pagination: { page: 1, pages: 1, count: 1, limit: 10, next: null, prev: null },
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: responseBody })
+
     const result = await sessions.getSessionsForWorkshop(1)
 
-    expect(result.data).toHaveLength(2)
-    expect(result.data.every((s) => s.workshopId === 1)).toBe(true)
+    expect(api.apiClient.get).toHaveBeenCalledWith('/sessions', { params: { workshop_id: 1, page: 1, per_page: 10 } })
+    expect(result.data).toEqual([
+      {
+        id: 101,
+        workshopId: 1,
+        startsAt: '2026-08-01T09:00:00.000Z',
+        endsAt: '2026-08-01T11:00:00.000Z',
+        capacity: 3,
+        status: 'scheduled',
+      },
+    ])
   })
 
   it('paginates sessions', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: { message: null, status: 'ok', data: [], pagination: { page: 1, pages: 2, count: 2, limit: 1, next: 2, prev: null } },
+    })
+
     const result = await sessions.getSessionsForWorkshop(1, 1, 1)
 
-    expect(result.data).toHaveLength(1)
+    expect(api.apiClient.get).toHaveBeenCalledWith('/sessions', { params: { workshop_id: 1, page: 1, per_page: 1 } })
     expect(result.pagination.pages).toBe(2)
   })
 })
 
+describe('getSessions', () => {
+  it('maps filters to backend query params and session list items', async () => {
+    const responseBody = {
+      message: null,
+      status: 'ok',
+      data: [
+        {
+          id: 101,
+          workshop_id: 1,
+          workshop_title: 'Rails APIs for Modern Teams',
+          topic: 'Rails',
+          starts_at: '2026-08-01T09:00:00.000Z',
+          ends_at: '2026-08-01T11:00:00.000Z',
+          capacity: 3,
+          status: 'scheduled',
+          held_seats: 1,
+          confirmed_seats: 1,
+          waitlist_size: 0,
+          available_seats: 1,
+        },
+      ],
+      pagination: { page: 1, pages: 1, count: 1, limit: 10, next: null, prev: null },
+    }
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: responseBody })
+
+    const result = await sessions.getSessions({
+      from: '2026-08-01T00:00:00.000Z',
+      topic: 'Rails',
+      available: true,
+      sort: 'available_seats',
+      page: 1,
+      perPage: 10,
+    })
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/sessions', {
+      params: {
+        starts_after: '2026-08-01T00:00:00.000Z',
+        ends_before: undefined,
+        topic: 'Rails',
+        available: true,
+        sort: 'available_seats',
+        page: 1,
+        per_page: 10,
+      },
+    })
+    expect(result.data).toEqual([
+      {
+        id: 101,
+        workshopId: 1,
+        workshopTitle: 'Rails APIs for Modern Teams',
+        topic: 'Rails',
+        startsAt: '2026-08-01T09:00:00.000Z',
+        endsAt: '2026-08-01T11:00:00.000Z',
+        capacity: 3,
+        status: 'scheduled',
+        availableSeats: 1,
+        heldCount: 1,
+        confirmedCount: 1,
+        waitlistCount: 0,
+      },
+    ])
+  })
+
+  it('caps perPage at MAX_SESSIONS_PER_PAGE', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: { message: null, status: 'ok', data: [], pagination: { page: 1, pages: 1, count: 0, limit: 50, next: null, prev: null } },
+    })
+
+    await sessions.getSessions({ perPage: 500 })
+
+    expect(api.apiClient.get).toHaveBeenCalledWith(
+      '/sessions',
+      expect.objectContaining({ params: expect.objectContaining({ per_page: sessions.MAX_SESSIONS_PER_PAGE }) }),
+    )
+  })
+})
+
 describe('createSession', () => {
-  it('creates a session and makes it retrievable', async () => {
+  it('posts the session under the workshop and returns the mapped session', async () => {
+    const created = {
+      id: 201,
+      workshop_id: 2,
+      workshop_title: 'Vue 3 Patterns for Product Teams',
+      starts_at: '2026-09-01T09:00:00.000Z',
+      ends_at: '2026-09-01T11:00:00.000Z',
+      capacity: 5,
+      status: 'scheduled',
+    }
+    vi.spyOn(api.apiClient, 'post').mockResolvedValue({ data: { data: created } })
+
     const session = await sessions.createSession({
       workshopId: 2,
       startsAt: '2026-09-01T09:00:00.000Z',
@@ -143,58 +288,82 @@ describe('createSession', () => {
       status: 'scheduled',
     })
 
-    const found = await sessions.getSessionById(session.id)
-    expect(found).toEqual(session)
+    expect(api.apiClient.post).toHaveBeenCalledWith('/workshops/2/sessions', {
+      session: {
+        starts_at: '2026-09-01T09:00:00.000Z',
+        ends_at: '2026-09-01T11:00:00.000Z',
+        capacity: 5,
+        status: 'scheduled',
+      },
+    })
+    expect(session).toEqual({
+      id: 201,
+      workshopId: 2,
+      startsAt: '2026-09-01T09:00:00.000Z',
+      endsAt: '2026-09-01T11:00:00.000Z',
+      capacity: 5,
+      status: 'scheduled',
+    })
   })
 })
 
 describe('getSessionById', () => {
+  it('returns the mapped session', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: {
+        data: {
+          id: 101,
+          workshop_id: 1,
+          workshop_title: 'Rails APIs for Modern Teams',
+          starts_at: '2026-08-01T09:00:00.000Z',
+          ends_at: '2026-08-01T11:00:00.000Z',
+          capacity: 3,
+          status: 'scheduled',
+        },
+      },
+    })
+
+    const session = await sessions.getSessionById(101)
+
+    expect(api.apiClient.get).toHaveBeenCalledWith('/sessions/101')
+    expect(session).toEqual({
+      id: 101,
+      workshopId: 1,
+      startsAt: '2026-08-01T09:00:00.000Z',
+      endsAt: '2026-08-01T11:00:00.000Z',
+      capacity: 3,
+      status: 'scheduled',
+    })
+  })
+
   it('returns undefined for an unknown session', async () => {
+    const axiosError = Object.assign(new Error('Not Found'), { isAxiosError: true, response: { status: 404, data: {} } })
+    vi.spyOn(api.apiClient, 'get').mockRejectedValue(axiosError)
+    vi.spyOn(axios, 'isAxiosError').mockReturnValue(true)
+
     const session = await sessions.getSessionById(999999)
     expect(session).toBeUndefined()
   })
 })
 
-describe('getAttendees', () => {
-  it('returns a copy of the attendee list', async () => {
-    const all = await attendees.getAttendees()
-    expect(all).toHaveLength(2)
+describe('getAttendeeByEmailFromApi', () => {
+  it('returns the first matching attendee', async () => {
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({
+      data: { data: [{ id: 1, name: 'Ana García', email: 'ana@example.com' }] },
+    })
 
-    all.push({ id: 999, name: 'Injected', email: 'injected@example.com' })
+    const attendee = await attendees.getAttendeeByEmailFromApi('ANA@example.com')
 
-    const attendeesAgain = await attendees.getAttendees()
-    expect(attendeesAgain).toHaveLength(2)
-  })
-})
-
-describe('getAttendeeByEmail', () => {
-  it('finds an attendee case-insensitively', async () => {
-    const attendee = await attendees.getAttendeeByEmail('ANA@EXAMPLE.COM')
-    expect(attendee?.name).toBe('Ana García')
+    expect(api.apiClient.get).toHaveBeenCalledWith('/attendees', { params: { email: 'ANA@example.com' } })
+    expect(attendee).toEqual({ id: 1, name: 'Ana García', email: 'ana@example.com' })
   })
 
   it('returns undefined when no attendee matches', async () => {
-    const attendee = await attendees.getAttendeeByEmail('nobody@example.com')
+    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: { data: [] } })
+
+    const attendee = await attendees.getAttendeeByEmailFromApi('nobody@example.com')
+
     expect(attendee).toBeUndefined()
-  })
-})
-
-describe('createAttendee', () => {
-  it('creates a new attendee', async () => {
-    const attendee = await attendees.createAttendee('New Person', 'new@example.com')
-    expect(attendee).toMatchObject({ name: 'New Person', email: 'new@example.com' })
-
-    const all = await attendees.getAttendees()
-    expect(all).toHaveLength(3)
-  })
-
-  it('returns the existing attendee instead of duplicating', async () => {
-    const attendee = await attendees.createAttendee('Ana Duplicate', 'ANA@example.com')
-    expect(attendee.id).toBe(1)
-    expect(attendee.name).toBe('Ana García')
-
-    const all = await attendees.getAttendees()
-    expect(all).toHaveLength(2)
   })
 })
 
@@ -655,18 +824,6 @@ describe('getDashboardMetrics', () => {
     expect(metrics.fullSessions).toBe(1)
     expect(metrics.topWaitlistedSessions[0]).toMatchObject({ id: 103, waitlistSize: 2 })
     expect(metrics.topWaitlistedSessions.length).toBeLessThanOrEqual(3)
-  })
-})
-
-describe('getWorkshopsFromApi', () => {
-  it('fetches workshops from the backend API', async () => {
-    const mockData = [{ id: 1, title: 'From API', description: '', topic: '', active: true }]
-    vi.spyOn(api.apiClient, 'get').mockResolvedValue({ data: mockData })
-
-    const result = await workshops.getWorkshopsFromApi()
-
-    expect(result).toEqual(mockData)
-    expect(api.apiClient.get).toHaveBeenCalledWith('/workshops')
   })
 })
 

@@ -1,12 +1,4 @@
-import {
-  sessionStore,
-  registrationStore,
-  attendeeStore,
-  workshopStore,
-  nextSessionId,
-  paginateMock,
-  getActiveRegistrationsForSession,
-} from './mock-store'
+import axios from 'axios'
 import { apiClient, DEFAULT_PAGE_SIZE } from './api'
 import type {
   Session,
@@ -14,106 +6,104 @@ import type {
   SessionListFilters,
   SessionListItem,
   SessionAttendee,
+  SessionApiRecord,
+  SessionListApiRecord,
   SessionRegistrationApiRecord,
 } from '../types/session'
 import type { PaginatedResult, PaginationInfo } from '../types/pagination'
-import type { Registration } from '../types/registration'
 
-// Documented maximum page size for GET /api/v1/sessions, matches the backend contract.
-export const MAX_SESSIONS_PER_PAGE = 50
+// GET /api/v1/sessions caps per_page at Pagy::DEFAULT[:items] (PAGY_DEFAULT_ITEMS) server-side.
+export const MAX_SESSIONS_PER_PAGE = DEFAULT_PAGE_SIZE
+
+function toSession(record: SessionApiRecord): Session {
+  return {
+    id: record.id,
+    workshopId: record.workshop_id,
+    startsAt: record.starts_at,
+    endsAt: record.ends_at,
+    capacity: record.capacity,
+    status: record.status,
+  }
+}
+
+function toSessionListItem(record: SessionListApiRecord): SessionListItem {
+  return {
+    ...toSession(record),
+    workshopTitle: record.workshop_title,
+    topic: record.topic,
+    availableSeats: record.available_seats,
+    heldCount: record.held_seats,
+    confirmedCount: record.confirmed_seats,
+    waitlistCount: record.waitlist_size,
+  }
+}
 
 export async function getSessionsForWorkshop(
   workshopId: number,
   page = 1,
   perPage = DEFAULT_PAGE_SIZE,
 ): Promise<PaginatedResult<Session>> {
-  await Promise.resolve()
-  const filtered = sessionStore.filter((session) => session.workshopId === workshopId)
-  return paginateMock(filtered, page, perPage)
+  const response = await apiClient.get<{
+    message: string | null
+    data: SessionApiRecord[]
+    status: string
+    pagination: PaginationInfo
+  }>('/sessions', { params: { workshop_id: workshopId, page, per_page: perPage } })
+
+  return { ...response.data, data: response.data.data.map(toSession) }
 }
 
 export async function getSessions(filters: SessionListFilters = {}): Promise<PaginatedResult<SessionListItem>> {
-  await Promise.resolve()
-
   const page = filters.page ?? 1
   const perPage = Math.min(filters.perPage ?? DEFAULT_PAGE_SIZE, MAX_SESSIONS_PER_PAGE)
 
-  let items: SessionListItem[] = sessionStore.map((session) => {
-    const workshop = workshopStore.find((item) => item.id === session.workshopId)
-    const active = getActiveRegistrationsForSession(session.id)
-    const waitlistCount = registrationStore.filter(
-      (registration) => registration.sessionId === session.id && registration.status === 'waitlisted',
-    ).length
-
-    return {
-      ...session,
-      workshopTitle: workshop?.title ?? 'Unknown workshop',
-      topic: workshop?.topic ?? '',
-      availableSeats: Math.max(0, session.capacity - active.length),
-      heldCount: active.filter((registration) => registration.status === 'held').length,
-      confirmedCount: active.filter((registration) => registration.status === 'confirmed').length,
-      waitlistCount,
-    }
+  const response = await apiClient.get<{
+    message: string | null
+    data: SessionListApiRecord[]
+    status: string
+    pagination: PaginationInfo
+  }>('/sessions', {
+    params: {
+      starts_after: filters.from,
+      ends_before: filters.to,
+      topic: filters.topic,
+      available: filters.available || undefined,
+      sort: filters.sort,
+      page,
+      per_page: perPage,
+    },
   })
 
-  if (filters.from) {
-    const from = new Date(filters.from).getTime()
-    items = items.filter((session) => new Date(session.startsAt).getTime() >= from)
-  }
-
-  if (filters.to) {
-    const to = new Date(filters.to).getTime()
-    items = items.filter((session) => new Date(session.startsAt).getTime() <= to)
-  }
-
-  if (filters.topic) {
-    const topic = filters.topic.toLowerCase()
-    items = items.filter((session) => session.topic.toLowerCase() === topic)
-  }
-
-  if (filters.available) {
-    items = items.filter((session) => session.availableSeats > 0)
-  }
-
-  const sort = filters.sort ?? 'starts_at'
-  items = [...items].sort((a, b) =>
-    sort === 'available_seats'
-      ? a.availableSeats - b.availableSeats
-      : new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
-  )
-
-  return paginateMock(items, page, perPage)
+  return { ...response.data, data: response.data.data.map(toSessionListItem) }
 }
 
 export async function createSession(payload: CreateSessionPayload): Promise<Session> {
-  const session: Session = {
-    id: nextSessionId(),
-    ...payload,
-  }
+  const response = await apiClient.post<{ data: SessionApiRecord }>(`/workshops/${payload.workshopId}/sessions`, {
+    session: {
+      starts_at: payload.startsAt,
+      ends_at: payload.endsAt,
+      capacity: payload.capacity,
+      status: payload.status,
+    },
+  })
 
-  sessionStore.unshift(session)
-  return session
+  return toSession(response.data.data)
 }
 
+/**
+ * Loads a single session from the real backend (GET /api/v1/sessions/:id).
+ * Returns undefined on a 404 so views can show a "not found" state.
+ */
 export async function getSessionById(id: number): Promise<Session | undefined> {
-  await Promise.resolve()
-  return sessionStore.find((session) => session.id === id)
-}
-
-export async function getSessionAttendeeStatuses(
-  sessionId: number,
-): Promise<Array<{ name: string; email: string; status: Registration['status'] }>> {
-  await Promise.resolve()
-  return registrationStore
-    .filter((registration) => registration.sessionId === sessionId)
-    .map((registration) => {
-      const attendee = attendeeStore.find((item) => item.id === registration.attendeeId)
-      return {
-        name: attendee?.name ?? 'Unknown attendee',
-        email: attendee?.email ?? 'unknown@example.com',
-        status: registration.status,
-      }
-    })
+  try {
+    const response = await apiClient.get<{ data: SessionApiRecord }>(`/sessions/${id}`)
+    return toSession(response.data.data)
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return undefined
+    }
+    throw error
+  }
 }
 
 /**
