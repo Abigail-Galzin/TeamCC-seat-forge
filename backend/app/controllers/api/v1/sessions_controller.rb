@@ -11,7 +11,7 @@ class Api::V1::SessionsController < ApplicationController
 
     response = Response::ResponseData.new(
       data: records.map {
-        |session| Response::SessionSerializer.new(session, include_availability: false).as_json
+        |session| Response::SessionSerializer.new(session, include_availability: true).as_json
       },
       message: I18n.t('success.response', model: Session.model_name.human.pluralize),
       status: :ok

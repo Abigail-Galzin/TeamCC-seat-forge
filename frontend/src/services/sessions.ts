@@ -9,6 +9,8 @@ import type {
   SessionApiRecord,
   SessionListApiRecord,
   SessionRegistrationApiRecord,
+  SessionCancellationApiRecord,
+  SessionCancellationResult,
 } from '../types/session'
 import type { PaginatedResult, PaginationInfo } from '../types/pagination'
 
@@ -103,6 +105,25 @@ export async function getSessionById(id: number): Promise<Session | undefined> {
       return undefined
     }
     throw error
+  }
+}
+
+/**
+ * Cancels a session (POST /api/v1/sessions/:id/cancel), cascading the cancellation to every
+ * held/confirmed/waitlisted registration for it. The backend requires a non-blank
+ * cancellation_reason and returns how many registrations of each status were cancelled.
+ */
+export async function cancelSession(id: number, cancellationReason: string): Promise<SessionCancellationResult> {
+  const response = await apiClient.post<{ data: SessionCancellationApiRecord }>(`/sessions/${id}/cancel`, {
+    cancellation_reason: cancellationReason,
+  })
+  const data = response.data.data
+
+  return {
+    sessionId: data.session_id,
+    status: data.status,
+    cancellationReason: data.cancellation_reason,
+    cancelledRegistrations: data.cancelled_registrations,
   }
 }
 

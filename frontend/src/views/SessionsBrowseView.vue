@@ -160,16 +160,7 @@ onMounted(async () => {
         <Column header="Waitlist">
           <template #body="{ data }">{{ data.waitlistCount }}</template>
         </Column>
-        <Column header="Actions">
-          <template #body="{ data }">
-            <Button
-              label="View & register"
-              severity="primary"
-              size="small"
-              @click="router.push({ name: 'attendee-workshop-sessions', params: { workshopId: data.workshopId } })"
-            />
-          </template>
-        </Column>
+     
       </DataTable>
     </div>
   </div>
