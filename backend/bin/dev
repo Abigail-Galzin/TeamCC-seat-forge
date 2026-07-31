@@ -1,2 +1,24 @@
 #!/usr/bin/env ruby
-exec "./bin/rails", "server", *ARGV
+require "rbconfig"
+
+# Runs the web server and the Solid Queue worker together, so a single
+# `bin/dev` gives you a fully working dev environment (including
+# recurring jobs from config/recurring.yml) without a second terminal.
+#
+# Spawned via RbConfig.ruby (the interpreter running this script) rather
+# than exec'd directly, since Process.spawn can't run a shebang script
+# directly on native Windows Ruby (Errno::ENOEXEC).
+
+pids = [
+  Process.spawn({ "SOLID_QUEUE_DEV_AUTOSTART" => "0" }, RbConfig.ruby, "./bin/rails", "server", *ARGV),
+  Process.spawn(RbConfig.ruby, "./bin/jobs")
+]
+
+%w[INT TERM].each do |signal|
+  Signal.trap(signal) do
+    pids.each { |pid| Process.kill("KILL", pid) rescue nil }
+    exit
+  end
+end
+
+Process.waitall

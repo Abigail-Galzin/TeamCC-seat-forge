@@ -75,7 +75,7 @@ onMounted(async () => {
                 label="View attendees"
                 severity="primary"
                 size="small"
-                @click="router.push({ name: 'admin-session-attendees', params: { sessionId: data.id } })"
+                @click="router.push({ name: 'admin-session-attendees', params: { workshopId, sessionId: data.id } })"
               />
             </div>
           </template>

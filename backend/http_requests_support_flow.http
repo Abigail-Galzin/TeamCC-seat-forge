@@ -34,25 +34,37 @@ GET {{baseUrl}}/attendees
 ### Show an attendee
 GET {{baseUrl}}/attendees/1
 
-### Register attendee A for the session -> should be held
+### 4. Register attendee A for the session -> should be held
 # @name registerA
-POST {{baseUrl}}/workshops/1/sessions/10/registrations
+POST {{baseUrl}}/workshops/2/sessions/1/registrations
 Content-Type: {{contentType}}
 
 {
   "registration": {
-    "attendee_id": 7
+    "attendee_id": 2
   }
 }
 
 ### List registrations for the session
-GET {{baseUrl}}/workshops/1/sessions/9/registrations
+GET {{baseUrl}}/workshops/1/sessions/1/registrations
 
 ### Show a single registration
-GET {{baseUrl}}/workshops/1/sessions/9/registrations/7
+GET {{baseUrl}}/workshops/1/sessions/1/registrations/1
 
-### Confirm attendee A's held registration -> sets confirmed_at, clears hold_expires_at, enqueues a notification job
-POST {{baseUrl}}/workshops/1/sessions/10/registrations/40/confirm
+### 6. Confirm attendee A's held registration -> sets confirmed_at, clears hold_expires_at, enqueues a notification job
+POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/confirm
 
-### Cancel attendee A's confirmed registration -> releases the seat and promotes attendee B from waitlisted to held
-POST {{baseUrl}}/workshops/1/sessions/10/registrations/46/cancel
+### Confirming again is idempotent -> same result, no duplicate notification
+POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/confirm
+
+### 7. Cancel attendee A's confirmed registration -> releases the seat and promotes attendee B from waitlisted to held
+POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/cancel
+
+### Cancelling again is idempotent
+POST {{baseUrl}}/workshops/1/sessions/1/registrations/1/cancel
+
+### Attendee B should now be held (promoted) with a fresh 10-minute hold_expires_at
+GET {{baseUrl}}/workshops/1/sessions/1/registrations/2
+
+### Confirm attendee B's promoted registration
+POST {{baseUrl}}/workshops/1/sessions/1/registrations/2/confirm

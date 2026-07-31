@@ -8,6 +8,9 @@ import type { ApiErrorBody } from '../types/api-error'
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
+// Shared default page size for every paginator in the app, matches the backend's PAGY_DEFAULT_ITEMS.
+export const DEFAULT_PAGE_SIZE = Number(import.meta.env.VITE_PAGE_DEFAULT_ITEMS) || 10
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {

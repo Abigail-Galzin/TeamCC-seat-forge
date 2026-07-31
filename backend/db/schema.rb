@@ -15,20 +15,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_31_145058) do
   enable_extension "plpgsql"
 
   create_table "attendees", force: :cascade do |t|
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.string "email", null: false
     t.string "name", null: false
+    t.string "email", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["email"], name: "index_attendees_on_email", unique: true
   end
 
   create_table "registrations", force: :cascade do |t|
-    t.bigint "attendee_id", null: false
-    t.datetime "cancelled_at"
-    t.datetime "confirmed_at"
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.datetime "hold_expires_at"
     t.string "status", default: "held", null: false
+    t.datetime "hold_expires_at"
+    t.datetime "confirmed_at"
+    t.datetime "cancelled_at"
+    t.bigint "attendee_id", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.bigint "session_id", null: false
     t.index ["attendee_id"], name: "index_registrations_on_attendee_id"

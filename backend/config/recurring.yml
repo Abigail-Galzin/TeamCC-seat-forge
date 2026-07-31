@@ -13,7 +13,7 @@ development:
   expire_held_registrations:
     class: ExpireHeldRegistrationsJob
     queue: background
-    schedule: every 5 minutes
+    schedule: every minute
 
 production:
   clear_solid_queue_finished_jobs:

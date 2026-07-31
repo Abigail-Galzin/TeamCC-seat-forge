@@ -7,18 +7,25 @@ import {
   paginateMock,
   getActiveRegistrationsForSession,
 } from './mock-store'
-import type { Session, CreateSessionPayload, SessionListFilters, SessionListItem } from '../types/session'
-import type { PaginatedResult } from '../types/pagination'
+import { apiClient, DEFAULT_PAGE_SIZE } from './api'
+import type {
+  Session,
+  CreateSessionPayload,
+  SessionListFilters,
+  SessionListItem,
+  SessionAttendee,
+  SessionRegistrationApiRecord,
+} from '../types/session'
+import type { PaginatedResult, PaginationInfo } from '../types/pagination'
 import type { Registration } from '../types/registration'
 
 // Documented maximum page size for GET /api/v1/sessions, matches the backend contract.
 export const MAX_SESSIONS_PER_PAGE = 50
-export const DEFAULT_SESSIONS_PER_PAGE = 10
 
 export async function getSessionsForWorkshop(
   workshopId: number,
   page = 1,
-  perPage = 5,
+  perPage = DEFAULT_PAGE_SIZE,
 ): Promise<PaginatedResult<Session>> {
   await Promise.resolve()
   const filtered = sessionStore.filter((session) => session.workshopId === workshopId)
@@ -29,7 +36,7 @@ export async function getSessions(filters: SessionListFilters = {}): Promise<Pag
   await Promise.resolve()
 
   const page = filters.page ?? 1
-  const perPage = Math.min(filters.perPage ?? DEFAULT_SESSIONS_PER_PAGE, MAX_SESSIONS_PER_PAGE)
+  const perPage = Math.min(filters.perPage ?? DEFAULT_PAGE_SIZE, MAX_SESSIONS_PER_PAGE)
 
   let items: SessionListItem[] = sessionStore.map((session) => {
     const workshop = workshopStore.find((item) => item.id === session.workshopId)
@@ -107,4 +114,35 @@ export async function getSessionAttendeeStatuses(
         status: registration.status,
       }
     })
+}
+
+/**
+ * Loads the attendees registered for a session from the real Rails backend
+ * (GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations), paginated.
+ * per_page is capped server-side at the app-wide Pagy default (PAGY_DEFAULT_ITEMS).
+ */
+export async function getSessionAttendeesFromApi(
+  workshopId: number,
+  sessionId: number,
+  page = 1,
+  perPage = DEFAULT_PAGE_SIZE,
+): Promise<PaginatedResult<SessionAttendee>> {
+  const response = await apiClient.get<{
+    message: string | null
+    data: SessionRegistrationApiRecord[]
+    status: string
+    pagination: PaginationInfo
+  }>(`/workshops/${workshopId}/sessions/${sessionId}/registrations`, {
+    params: { page, per_page: perPage },
+  })
+
+  return {
+    ...response.data,
+    data: response.data.data.map((record) => ({
+      attendeeId: record.attendee?.id ?? 0,
+      name: record.attendee?.name ?? 'Unknown attendee',
+      email: record.attendee?.email ?? 'unknown@example.com',
+      status: record.status,
+    })),
+  }
 }

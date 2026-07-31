@@ -1,3 +1,5 @@
+import type { Registration } from './registration'
+
 export interface Session {
   id: number
   workshopId: number
@@ -34,4 +36,17 @@ export interface SessionListItem extends Session {
   heldCount: number
   confirmedCount: number
   waitlistCount: number
+}
+
+export interface SessionAttendee {
+  attendeeId: number
+  name: string
+  email: string
+  status: Registration['status']
+}
+
+export interface SessionRegistrationApiRecord {
+  id: number
+  status: Registration['status']
+  attendee: { id: number; name: string; email: string } | null
 }

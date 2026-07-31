@@ -23,7 +23,11 @@ Rails.application.routes.draw do
           end
         end
       end
-      resources :attendees, only: [ :index, :show, :create ]
+      resources :attendees, only: [ :index, :show, :create ] do
+        member do
+          get :registrations
+        end
+      end
 
       resources :sessions, only: [:index, :show] do
         member do
