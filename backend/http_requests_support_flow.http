@@ -36,33 +36,12 @@ GET {{baseUrl}}/attendees/1
 
 ### 4. Register attendee A for the session -> should be held
 # @name registerA
-POST {{baseUrl}}/workshops/1/sessions/1/registrations
-Content-Type: {{contentType}}
-
-{
-  "registration": {
-    "attendee_id": 1
-  }
-}
-
-### 5. Register attendee B for the same session -> capacity is 1, so this should be waitlisted
-# @name registerB
-POST {{baseUrl}}/workshops/1/sessions/1/registrations
+POST {{baseUrl}}/workshops/2/sessions/1/registrations
 Content-Type: {{contentType}}
 
 {
   "registration": {
     "attendee_id": 2
-  }
-}
-
-### Registering attendee A again for the same session -> rejected (duplicate active registration)
-POST {{baseUrl}}/workshops/1/sessions/1/registrations
-Content-Type: {{contentType}}
-
-{
-  "registration": {
-    "attendee_id": 1
   }
 }
 
