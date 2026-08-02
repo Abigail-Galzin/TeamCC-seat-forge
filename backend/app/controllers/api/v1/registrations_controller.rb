@@ -4,7 +4,6 @@ class Api::V1::RegistrationsController < ApplicationController
   before_action :set_registration, only: [ :show, :confirm, :cancel ]
 
   # GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations?page=1&per_page=10
-  # Lists the attendees selected (registered) for the session, paginated, most recent first.
   def index
     @pagy, @registrations = pagy(
       @session.registrations.includes(:attendee).order(created_at: :desc),
@@ -24,7 +23,10 @@ class Api::V1::RegistrationsController < ApplicationController
   # GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id
   def show
     resp = Response::ResponseData.new(
-      data: @registration.as_json(except: [ :created_at, :updated_at ]),
+      data: @registration.as_json(
+        except: [ :created_at, :updated_at ],
+        include: { attendee: { only: [ :id, :name, :email ] } }
+      ),
       message: I18n.t('success.response', model: Registration.model_name.human)
     )
     render json: resp.as_json, status: resp.status
@@ -39,7 +41,10 @@ class Api::V1::RegistrationsController < ApplicationController
 
     if @registration.persisted?
       resp = Response::ResponseData.new(
-        data: @registration.as_json(except: [ :created_at, :updated_at ]),
+        data: @registration.as_json(
+          except: [ :created_at, :updated_at ],
+          include: { attendee: { only: [ :id, :name, :email ] } }
+        ),
         message: I18n.t('success.response', model: Registration.model_name.human),
         status: :created
       )
@@ -69,7 +74,10 @@ class Api::V1::RegistrationsController < ApplicationController
   def confirm
     if @registration.confirm
       resp = Response::ResponseData.new(
-        data: @registration.as_json(except: [ :created_at, :updated_at ]),
+        data: @registration.as_json(
+          except: [ :created_at, :updated_at ],
+          include: { attendee: { only: [ :id, :name, :email ] } }
+        ),
         message: I18n.t('success.response', model: Registration.model_name.human)
       )
       render json: resp.as_json, status: resp.status
@@ -89,7 +97,10 @@ class Api::V1::RegistrationsController < ApplicationController
   def cancel
     if @registration.cancel
       resp = Response::ResponseData.new(
-        data: @registration.as_json(except: [ :created_at, :updated_at ]),
+        data: @registration.as_json(
+          except: [ :created_at, :updated_at ],
+          include: { attendee: { only: [ :id, :name, :email ] } }
+        ),
         message: I18n.t('success.response', model: Registration.model_name.human)
       )
       render json: resp.as_json, status: resp.status

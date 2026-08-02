@@ -22,6 +22,11 @@ export interface RegistrationApiRecord {
   hold_expires_at: string | null
   confirmed_at: string | null
   cancelled_at: string | null
+  attendee?: {
+    id: number
+    name: string
+    email: string
+  }
 }
 
 export interface RegistrationStatusCounts {

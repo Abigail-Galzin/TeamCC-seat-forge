@@ -43,12 +43,49 @@ function toRegistration(record: RegistrationApiRecord): Registration {
  * and conflict validation (duplicate/overlapping registration) — callers should
  * surface backend errors via getErrorMessage rather than a generic message.
  */
-export async function reserveSeatFromApi(workshopId: number, payload: RegistrationPayload): Promise<Registration> {
+export async function reserveSeatFromApi(workshopId: number, payload: RegistrationPayload): Promise<Registration & { attendee?: Attendee }> {
   await ensureAttendeeExistsInApi(payload.attendeeName, payload.attendeeEmail)
 
   const response = await apiClient.post<{ data: RegistrationApiRecord }>(
     `/workshops/${workshopId}/sessions/${payload.sessionId}/registrations`,
     { attendee: { name: payload.attendeeName, email: payload.attendeeEmail } },
+  )
+
+  const registration = toRegistration(response.data.data)
+  const attendee = response.data.data.attendee
+
+  return {
+    ...registration,
+    attendee: attendee ? { id: attendee.id, name: attendee.name, email: attendee.email } : undefined
+  }
+}
+/**
+ * Confirms a held registration
+ * POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id/confirm
+ */
+export async function confirmRegistrationFromApi(
+  workshopId: number,
+  sessionId: number,
+  registrationId: number
+): Promise<Registration> {
+  const response = await apiClient.post<{ data: RegistrationApiRecord }>(
+    `/workshops/${workshopId}/sessions/${sessionId}/registrations/${registrationId}/confirm`
+  )
+
+  return toRegistration(response.data.data)
+}
+
+/**
+ * Fetches a specific registration by ID
+ * GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id
+ */
+export async function getRegistrationFromApi(
+  workshopId: number,
+  sessionId: number,
+  registrationId: number
+): Promise<Registration> {
+  const response = await apiClient.get<{ data: RegistrationApiRecord }>(
+    `/workshops/${workshopId}/sessions/${sessionId}/registrations/${registrationId}`
   )
 
   return toRegistration(response.data.data)
