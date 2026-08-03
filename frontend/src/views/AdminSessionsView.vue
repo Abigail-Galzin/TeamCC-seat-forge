@@ -116,7 +116,7 @@ async function confirmCancelSession() {
           <template #body="{ data }">
             <Badge :value="data.status" :severity="data.status === 'scheduled' ? 'success' : 'secondary'" />
             <p v-if="data.status === 'cancelled' && data.cancellationReason" class="cancellation-reason">
-              {{ data.cancellationReason }}
+              {{'Reason: '+ data.cancellationReason }}
             </p>
           </template>
         </Column>
