@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+# Solid Queue's default supervisor mode forks worker/dispatcher processes,
+# but Process.fork is unimplemented on Windows. Force async (thread-based)
+# mode there so `bin/jobs` works without callers having to remember the flag.
+ENV["SOLID_QUEUE_SUPERVISOR_MODE"] ||= "async" if Gem.win_platform?
+
 require_relative "../config/environment"
 require "solid_queue/cli"
 
