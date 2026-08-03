@@ -13,9 +13,12 @@ const toast = useToast()
 const workshopId = Number(route.params.workshopId)
 const workshop = ref<Workshop | undefined>()
 const submitting = ref(false)
+
 const form = reactive({
-  startsAt: null as Date | null,
-  endsAt: null as Date | null,
+  startDate: null as Date | null,
+  startTime: '' as string, // "HH:mm"
+  endDate: null as Date | null,
+  endTime: '' as string,   // "HH:mm"
   capacity: 10,
   status: 'scheduled' as 'scheduled' | 'cancelled' | 'completed',
 })
@@ -26,6 +29,41 @@ const statusOptions = [
   { label: 'Completed', value: 'completed' },
 ]
 
+// Safely combine Date object + HH:mm string into a single Date instance
+function combineDateTime(date: Date | null, timeStr: string): Date | null {
+  if (!date) return null
+  const result = new Date(date)
+  if (timeStr) {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    if (!isNaN(hours) && !isNaN(minutes)) {
+      result.setHours(hours, minutes, 0, 0)
+    }
+  }
+  return result
+}
+
+// Extract "HH:mm" string from a Date object
+function getTimeString(date: Date | null): string {
+  if (!date) return ''
+  const h = String(date.getHours()).padStart(2, '0')
+  const m = String(date.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+}
+
+function onStartDateSelect(val: Date | null) {
+  form.startDate = val
+  if (val && !form.startTime) {
+    form.startTime = getTimeString(val)
+  }
+}
+
+function onEndDateSelect(val: Date | null) {
+  form.endDate = val
+  if (val && !form.endTime) {
+    form.endTime = getTimeString(val)
+  }
+}
+
 onMounted(async () => {
   try {
     workshop.value = await getWorkshopById(workshopId)
@@ -35,8 +73,11 @@ onMounted(async () => {
 })
 
 async function submit() {
-  if (!form.startsAt || !form.endsAt) {
-    toast.add({ severity: 'warn', summary: 'Missing dates', detail: 'Please choose a start and end date.', life: 3000 })
+  const startsAt = combineDateTime(form.startDate, form.startTime)
+  const endsAt = combineDateTime(form.endDate, form.endTime)
+
+  if (!startsAt || !endsAt) {
+    toast.add({ severity: 'warn', summary: 'Missing dates', detail: 'Please choose both start and end date/time.', life: 3000 })
     return
   }
 
@@ -44,8 +85,8 @@ async function submit() {
   try {
     await createSession({
       workshopId,
-      startsAt: form.startsAt.toISOString(),
-      endsAt: form.endsAt.toISOString(),
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
       capacity: form.capacity,
       status: form.status,
     })
@@ -78,12 +119,42 @@ async function submit() {
     <form class="card" @submit.prevent="submit">
       <label>
         <span>Start</span>
-        <DatePicker v-model="form.startsAt" showTime hourFormat="24" showIcon required />
+        <div class="datetime-group">
+          <DatePicker
+            :model-value="form.startDate"
+            @update:model-value="onStartDateSelect"
+            showIcon
+            dateFormat="yy-mm-dd"
+            placeholder="Select date"
+            required
+          />
+          <InputText
+            v-model="form.startTime"
+            type="time"
+            class="time-picker"
+            required
+          />
+        </div>
       </label>
 
       <label>
         <span>End</span>
-        <DatePicker v-model="form.endsAt" showTime hourFormat="24" showIcon required />
+        <div class="datetime-group">
+          <DatePicker
+            :model-value="form.endDate"
+            @update:model-value="onEndDateSelect"
+            showIcon
+            dateFormat="yy-mm-dd"
+            placeholder="Select date"
+            required
+          />
+          <InputText
+            v-model="form.endTime"
+            type="time"
+            class="time-picker"
+            required
+          />
+        </div>
       </label>
 
       <label>
@@ -115,4 +186,12 @@ h1 { margin: 0; }
 .card { display: grid; gap: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; }
 label { display: grid; gap: 0.4rem; }
 .form-submit { justify-self: end; }
+
+/* Custom layout for Date + Time hybrid input */
+.datetime-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 </style>

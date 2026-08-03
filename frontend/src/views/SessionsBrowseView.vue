@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSessions } from '../services/sessions'
 import { getWorkshopTopics } from '../services/workshops'
@@ -26,20 +26,62 @@ const sortOptions: Array<{ label: string; value: SessionSort }> = [
 ]
 
 const filters = reactive({
-  from: null as Date | null,
-  to: null as Date | null,
+  fromDate: null as Date | null,
+  fromTime: '' as string, // "HH:mm" format
+  toDate: null as Date | null,
+  toTime: '' as string,   // "HH:mm" format
   topic: null as string | null,
   availableOnly: false,
   sort: 'starts_at' as SessionSort,
 })
 
+// Safely merge Date + Time string into a single Date object
+function combineDateTime(date: Date | null, timeStr: string): Date | null {
+  if (!date) return null
+  const result = new Date(date)
+  if (timeStr) {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    if (!isNaN(hours) && !isNaN(minutes)) {
+      result.setHours(hours, minutes, 0, 0)
+    }
+  }
+  return result
+}
+
+// Helpers to extract "HH:mm" string from a Date object
+function getTimeString(date: Date | null): string {
+  if (!date) return ''
+  const h = String(date.getHours()).padStart(2, '0')
+  const m = String(date.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+}
+
+// Event handler for DatePicker date selection
+function onFromDateSelect(val: Date | null) {
+  filters.fromDate = val
+  if (val && !filters.fromTime) {
+    filters.fromTime = getTimeString(val)
+  }
+}
+
+function onToDateSelect(val: Date | null) {
+  filters.toDate = val
+  if (val && !filters.toTime) {
+    filters.toTime = getTimeString(val)
+  }
+}
+
 async function loadPage(pageNumber = 1) {
   loading.value = true
   loadError.value = null
+
+  const fromDateTime = combineDateTime(filters.fromDate, filters.fromTime)
+  const toDateTime = combineDateTime(filters.toDate, filters.toTime)
+
   try {
     sessions.value = await getSessions({
-      from: filters.from ? filters.from.toISOString() : undefined,
-      to: filters.to ? filters.to.toISOString() : undefined,
+      from: fromDateTime ? fromDateTime.toISOString() : undefined,
+      to: toDateTime ? toDateTime.toISOString() : undefined,
       topic: filters.topic ?? undefined,
       available: filters.availableOnly || undefined,
       sort: filters.sort,
@@ -63,8 +105,10 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filters.from = null
-  filters.to = null
+  filters.fromDate = null
+  filters.fromTime = ''
+  filters.toDate = null
+  filters.toTime = ''
   filters.topic = null
   filters.availableOnly = false
   filters.sort = 'starts_at'
@@ -91,14 +135,44 @@ onMounted(async () => {
     </div>
 
     <div class="filters-card">
+      <!-- From Filter -->
       <div class="filter-field">
         <span>From</span>
-        <DatePicker v-model="filters.from" showTime hourFormat="24" showIcon placeholder="Any" />
+        <div class="datetime-group">
+          <DatePicker
+            :model-value="filters.fromDate"
+            @update:model-value="onFromDateSelect"
+            showIcon
+            placeholder="Date"
+            dateFormat="yy-mm-dd"
+          />
+          <InputText
+            v-model="filters.fromTime"
+            type="time"
+            class="time-picker"
+            placeholder="00:00"
+          />
+        </div>
       </div>
 
+      <!-- To Filter -->
       <div class="filter-field">
         <span>To</span>
-        <DatePicker v-model="filters.to" showTime hourFormat="24" showIcon placeholder="Any" />
+        <div class="datetime-group">
+          <DatePicker
+            :model-value="filters.toDate"
+            @update:model-value="onToDateSelect"
+            showIcon
+            placeholder="Date"
+            dateFormat="yy-mm-dd"
+          />
+          <InputText
+            v-model="filters.toTime"
+            type="time"
+            class="time-picker"
+            placeholder="00:00"
+          />
+        </div>
       </div>
 
       <div class="filter-field">
@@ -106,14 +180,14 @@ onMounted(async () => {
         <Select v-model="filters.topic" :options="topics" placeholder="All topics" showClear />
       </div>
 
-      <div class="filter-field checkbox-field">
-        <Checkbox v-model="filters.availableOnly" :binary="true" inputId="available-only" />
-        <label for="available-only">Available seats only</label>
-      </div>
-
       <div class="filter-field">
         <span>Sort by</span>
         <Select v-model="filters.sort" :options="sortOptions" optionLabel="label" optionValue="value" />
+      </div>
+
+      <div class="filter-field checkbox-field">
+        <Checkbox v-model="filters.availableOnly" :binary="true" inputId="available-only" />
+        <label for="available-only">Available seats only</label>
       </div>
 
       <div class="filter-actions">
@@ -163,7 +237,6 @@ onMounted(async () => {
         <Column header="Waitlist">
           <template #body="{ data }">{{ data.waitlistCount }}</template>
         </Column>
-     
       </DataTable>
     </div>
   </div>
@@ -189,6 +262,11 @@ onMounted(async () => {
 .filter-field.checkbox-field { flex-direction: row; display: flex; align-items: center; gap: 0.5rem; }
 .filter-actions { display: flex; gap: 0.5rem; margin-left: auto; }
 
+.datetime-group {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
 .load-error { margin-bottom: 1rem; }
 .sessions-table-wrapper { overflow-x: auto; }
 .cancellation-reason { margin: 0.35rem 0 0; color: #64748b; font-size: 0.85rem; max-width: 16rem; }
