@@ -2,9 +2,10 @@ class Api::V1::WorkshopsController < ApplicationController
   before_action :set_workshop, only: [ :show, :update ]
 
   def index
-    workshops = Workshop.includes(:sessions).where(active: true)
+    workshops = Workshop.includes(:sessions)
+    workshops = workshops.where(active: ActiveModel::Type::Boolean.new.cast(params[:active])) if params[:active].present?
 
-    pagy, records = pagy(workshops)
+    pagy, records = pagy(workshops, items: per_page)
     response = Response::ResponseData.new(
       data: records.as_json(
         except: [:created_at, :updated_at],

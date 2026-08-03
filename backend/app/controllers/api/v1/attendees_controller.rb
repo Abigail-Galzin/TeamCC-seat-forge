@@ -3,7 +3,10 @@ class Api::V1::AttendeesController < ApplicationController
 
   # GET /api/v1/attendees?page=1&per_page=10
   def index
-    @pagy, @attendees = pagy(Attendee.all.order(:name), items: per_page)
+    attendees = Attendee.all.order(:name)
+    attendees = attendees.where("LOWER(email) = ?", params[:email].to_s.downcase) if params[:email].present?
+
+    @pagy, @attendees = pagy(attendees, items: per_page)
 
     resp = Response::ResponseData.new(
       data: @attendees.as_json(except: [ :created_at, :updated_at ]),

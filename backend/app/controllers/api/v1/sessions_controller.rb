@@ -7,7 +7,7 @@ class Api::V1::SessionsController < ApplicationController
     filter_query = Sessions::FilterQuery.new(filter_params)
     sessions = filter_query.call
 
-    pagy, records = pagy(sessions)
+    pagy, records = pagy(sessions, items: per_page)
 
     response = Response::ResponseData.new(
       data: records.map {
@@ -142,10 +142,10 @@ class Api::V1::SessionsController < ApplicationController
   end
 
   def session_params
-    params.require(:session).permit(:starts_at, :ends_at, :capacity)
+    params.require(:session).permit(:starts_at, :ends_at, :capacity, :status)
   end
 
   def filter_params
-    params.permit(:status, :workshop_id, :starts_after, :ends_before, :page, :per_page)
+    params.permit(:status, :workshop_id, :starts_after, :ends_before, :topic, :available, :sort, :page, :per_page)
   end
 end
