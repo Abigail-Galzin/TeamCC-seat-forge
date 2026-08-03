@@ -76,6 +76,22 @@ export async function confirmRegistrationFromApi(
 }
 
 /**
+ * Cancels a held, confirmed, or waitlisted registration
+ * POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id/cancel
+ */
+export async function cancelRegistrationFromApi(
+  workshopId: number,
+  sessionId: number,
+  registrationId: number
+): Promise<Registration> {
+  const response = await apiClient.post<{ data: RegistrationApiRecord }>(
+    `/workshops/${workshopId}/sessions/${sessionId}/registrations/${registrationId}/cancel`
+  )
+
+  return toRegistration(response.data.data)
+}
+
+/**
  * Fetches a specific registration by ID
  * GET /api/v1/workshops/:workshop_id/sessions/:session_id/registrations/:id
  */
