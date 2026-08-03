@@ -54,11 +54,6 @@ async function submit() {
         <InputText v-model="form.topic" required />
       </label>
 
-      <div class="checkbox">
-        <Checkbox v-model="form.active" :binary="true" inputId="workshop-active" />
-        <label for="workshop-active">Active</label>
-      </div>
-
       <Button
         type="submit"
         :label="submitting ? 'Creating...' : 'Save'"

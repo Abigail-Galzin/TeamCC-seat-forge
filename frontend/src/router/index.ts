@@ -15,7 +15,13 @@ const router = createRouter({
     },
     {
       path: '/workshops-catalog/:workshopId/sessions',
-      name: 'attendee-workshop-sessions',
+      name: 'workshop-sessions',
+      component: () => import('../views/WorkshopSessions.vue'),
+    },
+    {
+      path: '/workshops-catalog/:workshopId/sessions/:sessionId',
+      name: 'workshop-sessions-attendee',
+      //component: () => import('../views/SessionsView.vue'),
       component: () => import('../views/SessionsView.vue'),
     },
     {

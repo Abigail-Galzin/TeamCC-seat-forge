@@ -72,7 +72,7 @@ onMounted(() => loadPage())
                 label="View sessions"
                 severity="primary"
                 class="view-sessions-btn"
-                @click="router.push({ name: 'attendee-workshop-sessions', params: { workshopId: workshop.id } })"
+                @click="router.push({ name: 'workshop-sessions', params: { workshopId: workshop.id } })"
               />
             </template>
           </Card>
