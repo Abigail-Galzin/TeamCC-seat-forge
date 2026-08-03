@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import { getRegistrationHistoryByEmail } from '../services/registrations'
+import { getRegistrationHistoryByEmail, confirmRegistrationFromApi, cancelRegistrationFromApi } from '../services/registrations'
 import { getErrorMessage, DEFAULT_PAGE_SIZE } from '../services/api'
 import { emptyPaginatedResult } from '../types/pagination'
-import type { Attendee, AttendeeRegistrationsResult } from '../types/attendee'
+import type { Attendee, AttendeeRegistration, AttendeeRegistrationsResult } from '../types/attendee'
 
 const toast = useToast()
 const email = ref('')
@@ -15,6 +15,19 @@ const history = ref<AttendeeRegistrationsResult>({
   statusCounts: { held: 0, confirmed: 0, waitlisted: 0, cancelled: 0, expired: 0 },
 })
 const loading = ref(false)
+const actioningId = ref<number | null>(null)
+
+function isHoldExpired(holdExpiresAt?: string) {
+  return !!holdExpiresAt && new Date(holdExpiresAt) <= new Date()
+}
+
+function canConfirm(registration: AttendeeRegistration) {
+  return registration.status === 'held' && !isHoldExpired(registration.holdExpiresAt)
+}
+
+function canCancel(registration: AttendeeRegistration) {
+  return registration.status === 'held' || registration.status === 'confirmed' || registration.status === 'waitlisted'
+}
 
 async function loadPage(pageNumber = 1) {
   if (!email.value) {
@@ -52,6 +65,40 @@ async function loadPage(pageNumber = 1) {
 function onPage(event: { first: number; rows: number }) {
   const nextPage = Math.floor(event.first / event.rows) + 1
   loadPage(nextPage)
+}
+
+async function handleConfirm(registration: AttendeeRegistration) {
+  const workshopId = registration.session?.workshop?.id
+  const sessionId = registration.session?.id
+  if (!workshopId || !sessionId) return
+
+  actioningId.value = registration.id
+  try {
+    await confirmRegistrationFromApi(workshopId, sessionId, registration.id)
+    toast.add({ severity: 'success', summary: 'Registration confirmed', detail: `Registration #${registration.id} confirmed.`, life: 3000 })
+    await loadPage(history.value.pagination.page)
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Confirmation failed', detail: getErrorMessage(error), life: 4000 })
+  } finally {
+    actioningId.value = null
+  }
+}
+
+async function handleCancel(registration: AttendeeRegistration) {
+  const workshopId = registration.session?.workshop?.id
+  const sessionId = registration.session?.id
+  if (!workshopId || !sessionId) return
+
+  actioningId.value = registration.id
+  try {
+    await cancelRegistrationFromApi(workshopId, sessionId, registration.id)
+    toast.add({ severity: 'success', summary: 'Registration cancelled', detail: `Registration #${registration.id} cancelled.`, life: 3000 })
+    await loadPage(history.value.pagination.page)
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Cancellation failed', detail: getErrorMessage(error), life: 4000 })
+  } finally {
+    actioningId.value = null
+  }
 }
 </script>
 
@@ -93,6 +140,31 @@ function onPage(event: { first: number; rows: number }) {
             <Badge :value="data.status" />
           </template>
         </Column>
+        <Column header="Actions">
+          <template #body="{ data }">
+            <div class="row-actions">
+              <Button
+                v-if="canConfirm(data)"
+                label="Confirm"
+                severity="success"
+                size="small"
+                :loading="actioningId === data.id"
+                :disabled="actioningId !== null"
+                @click="handleConfirm(data)"
+              />
+              <Button
+                v-if="canCancel(data)"
+                label="Cancel"
+                severity="danger"
+                size="small"
+                variant="outlined"
+                :loading="actioningId === data.id"
+                :disabled="actioningId !== null"
+                @click="handleCancel(data)"
+              />
+            </div>
+          </template>
+        </Column>
       </DataTable>
     </div>
   </div>
@@ -104,4 +176,5 @@ function onPage(event: { first: number; rows: number }) {
 label { display: grid; gap: 0.4rem; }
 .form-submit { justify-self: end; }
 .list-card { overflow-x: auto; }
+.row-actions { display: flex; gap: 0.5rem; }
 </style>
