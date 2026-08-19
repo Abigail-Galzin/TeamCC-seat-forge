@@ -1,5 +1,8 @@
-class Api::V1::AttendeesController < ApplicationController
+class Api::V1::AttendeesController < Api::V1::BaseController
+  before_action :authenticate_admin!, only: [ :index, :create ]
+  before_action :authenticate_user!, only: [ :show, :registrations ]
   before_action :set_attendee, only: [ :show, :registrations ]
+  before_action :authorize_attendee_access!, only: [ :show, :registrations ]
 
   # GET /api/v1/attendees?page=1&per_page=10
   def index
@@ -81,6 +84,18 @@ class Api::V1::AttendeesController < ApplicationController
     @attendee = Attendee.find(params[:id])
   rescue ActiveRecord::RecordNotFound
     render json: { error: I18n.t('errors.response_not_found', model: 'Attendee') }, status: :not_found
+  end
+
+  def authorize_attendee_access!
+    return if current_user.admin? || current_user.attendee_id == @attendee.id
+
+    response = Response::ResponseError.new(
+      code: "forbidden",
+      message: I18n.t('errors.forbidden'),
+      details: [],
+      status: :forbidden
+    )
+    render json: response.as_json, status: response.status
   end
 
   def attendee_params

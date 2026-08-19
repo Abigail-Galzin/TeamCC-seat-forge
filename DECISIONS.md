@@ -115,3 +115,63 @@ time went into framework/tooling setup (Solid Queue, Pagy) rather than only busi
 API-only mode means there's no server-rendered view layer, so the JSON contract between backend
 and frontend needs discipline — handled here via a consistent response envelope
 (`Response::ResponseData` / `Response::ResponseError`) shared across controllers.
+
+## 5. Authentication & authorization: opaque bearer tokens + single `User` table with roles
+
+**Context.** The API was greenfield for security: no user model, no auth gems, and every endpoint —
+including admin write operations (create/update workshops, create/cancel sessions, confirm/cancel
+registrations) — was public. The frontend is a Vue SPA backed by an API-only Rails app
+(`config.api_only = true`, so no cookie/session middleware). We needed to protect admin operations,
+add self-service registration for attendees, and keep the change small enough to land in a few
+days.
+
+**Decision.**
+- **Identity:** a single `users` table (`email`, `name`, `password_digest`, timestamps) with a
+  `role` enum (`admin | attendee`). Attendee accounts carry an optional `belongs_to :attendee`,
+  linking the login identity to the existing `Attendee` record that registrations hang off.
+  Passwords are hashed with `bcrypt` (`has_secure_password`). Admins are seeded via
+  `db:seeds`/rake with a password from the environment — there is no public admin signup. Attendee
+  accounts are created at first seat reservation: sign up with email/password creates the `User`
+  and links (or creates) the matching `Attendee`.
+- **Authentication:** opaque bearer tokens, not JWT. A dedicated `auth_tokens` table stores a
+  SHA-256 digest of the token (never the plaintext), the owning `user_id`, `expires_at`, and
+  `revoked_at`. Login (`POST /api/v1/auth/login`) issues a token; logout revokes it; the client
+  sends it as `Authorization: Bearer <token>`. A new `Api::V1::BaseController` provides
+  `authenticate_user!` / `authenticate_admin!` filters, returning 401/403 in the existing
+  `Response::ResponseError` envelope so the frontend's error parser needs no changes.
+- **Authorization:** role-based filters plus ownership checks, no authorization gem. Attendees may
+  only read their own registration history; registration **confirm/cancel is admin-only** (per team
+  decision); attendees cannot mutate registrations from their own account.
+
+**Endpoint protection matrix.**
+
+| Public (no auth) | Attendee only | Admin only |
+|---|---|---|
+| GET workshops, workshop/:id | POST registration (reserve) | POST/PATCH workshops, POST sessions |
+| GET sessions, session/:id, availability | GET attendees/:id/registrations (own) | POST session/:id/cancel, POST registrations confirm/cancel |
+| GET dashboard overview | | GET registrations index, attendees index/search, per-workshop dashboard |
+
+**Frontend integration.** A Pinia `auth` store (token + user, persisted to `localStorage`), an
+axios request interceptor injecting the `Authorization` header, and a 401 response interceptor that
+clears the session and redirects to `/login`. Vue Router `beforeEach` guards read route
+`meta: { requiresAuth, roles }`; the admin navigation link is shown only to `admin` users.
+
+**Alternatives considered.**
+- **JWT bearer tokens** — stateless (no DB lookup per request), but requires managing a signing
+  secret and a revocation strategy (blacklist/expiry) for logout and token invalidation. For a
+  single-instance, short-lived build, opaque tokens avoid that machinery entirely.
+- **Cookie/session auth** — idiomatic for server-rendered Rails but requires re-enabling the
+  session/cookie middleware in an API-only app and fighting CORS/CSRF for an SPA.
+- **Separate admin table** — cleaner separation, but duplicates auth plumbing; two roles on one
+  table is simpler here.
+- **Authorization gem (Pundit/CanCanCan)** — arguably nicer at scale, but 6 controllers and 2 roles
+  are served by simple filters + ownership checks without adding a dependency.
+
+**Trade-offs / risks.** Opaque tokens mean one DB query per authenticated request (token lookup by
+digest); irrelevant at this scale, but a point in JWT's favor later. A single `User` table couples
+admin and attendee identities, so a future "admin" needs an attendee-less user (handled via the
+optional association). Token expiry/rotation and password policy are kept minimal (default bcrypt
+cost, reasonable `expires_at`) — acceptable for a demo build, must be hardened before real
+deployment. `request.params` says `sessions` is already the workshop-session feature name, so the
+auth routes live under `/api/v1/auth/*` and token state lives in `AuthToken`, avoiding any naming
+collision with `Session`.
