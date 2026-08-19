@@ -1,4 +1,6 @@
-class Api::V1::RegistrationsController < ApplicationController
+class Api::V1::RegistrationsController < Api::V1::BaseController
+  before_action :authenticate_admin!, only: [ :index, :show, :confirm, :cancel ]
+  before_action :authenticate_user!, only: [ :create ]
   before_action :set_workshop
   before_action :set_session
   before_action :set_registration, only: [ :show, :confirm, :cancel ]
@@ -34,8 +36,17 @@ class Api::V1::RegistrationsController < ApplicationController
 
   # POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations
   def create
-    attendee = find_attendee
-    return if attendee.nil?
+    attendee = current_user.attendee
+
+    unless attendee
+      response = Response::ResponseError.new(
+        code: "creation_conflict",
+        message: I18n.t("errors.create_error", model: Registration.model_name.human),
+        details: [ "No attendee profile is linked to this account" ],
+        status: :unprocessable_entity
+      )
+      return render json: response.as_json, status: response.status
+    end
 
     @registration = Registration.register(attendee: attendee, session: @session)
 
@@ -134,17 +145,5 @@ class Api::V1::RegistrationsController < ApplicationController
     @registration = @session.registrations.find(params[:id])
   rescue ActiveRecord::RecordNotFound
     render json: { error: I18n.t('errors.response_not_found', model: 'Registration') }, status: :not_found
-  end
-
-  def attendee_params
-    params.require(:attendee).permit(:name, :email)
-  end
-
-  def find_attendee
-    attendee = Attendee.find_by_email(attendee_params[:email])
-    return attendee if attendee
-
-    render json: { error: I18n.t('errors.response_not_found', model: 'Attendee') }, status: :not_found
-    nil
   end
 end

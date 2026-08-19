@@ -54,7 +54,9 @@ RSpec.describe "Api::V1::Workshops", type: :request do
 
   describe "POST /create" do
     it "creates a workshop with the given active flag" do
-      post "/api/v1/workshops", params: { workshop: { title: "New Workshop", description: "Desc", topic: "Testing", active: false } }
+      admin = create(:user, :admin)
+
+      post "/api/v1/workshops", params: { workshop: { title: "New Workshop", description: "Desc", topic: "Testing", active: false } }, headers: bearer_header_for(admin)
 
       json = response.parsed_body
       expect(response).to have_http_status(:created)
@@ -62,17 +64,36 @@ RSpec.describe "Api::V1::Workshops", type: :request do
     end
 
     it "returns validation errors" do
-      post "/api/v1/workshops", params: { workshop: { title: "", description: "", topic: "" } }
+      admin = create(:user, :admin)
+
+      post "/api/v1/workshops", params: { workshop: { title: "", description: "", topic: "" } }, headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "returns 401 for unauthenticated requests" do
+      post "/api/v1/workshops", params: { workshop: { title: "New", description: "Desc", topic: "Topic", active: true } }
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(JSON.parse(response.body)["error"]["code"]).to eq("unauthorized")
+    end
+
+    it "returns 403 for a non-admin attendee" do
+      attendee = create(:user)
+
+      post "/api/v1/workshops", params: { workshop: { title: "New", description: "Desc", topic: "Topic", active: true } }, headers: bearer_header_for(attendee)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(JSON.parse(response.body)["error"]["code"]).to eq("forbidden")
     end
   end
 
   describe "PATCH /update" do
     it "updates the workshop" do
+      admin = create(:user, :admin)
       workshop = create(:workshop, title: "Old title", active: true)
 
-      patch "/api/v1/workshops/#{workshop.id}", params: { workshop: { title: "New title", description: workshop.description, topic: workshop.topic, active: false } }
+      patch "/api/v1/workshops/#{workshop.id}", params: { workshop: { title: "New title", description: workshop.description, topic: workshop.topic, active: false } }, headers: bearer_header_for(admin)
 
       json = response.parsed_body
       expect(response).to have_http_status(:ok)
@@ -81,17 +102,28 @@ RSpec.describe "Api::V1::Workshops", type: :request do
     end
 
     it "returns 404 for an unknown workshop" do
-      patch "/api/v1/workshops/999999", params: { workshop: { title: "x", description: "x", topic: "x", active: true } }
+      admin = create(:user, :admin)
+
+      patch "/api/v1/workshops/999999", params: { workshop: { title: "x", description: "x", topic: "x", active: true } }, headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:not_found)
     end
 
     it "returns validation errors" do
+      admin = create(:user, :admin)
       workshop = create(:workshop)
 
-      patch "/api/v1/workshops/#{workshop.id}", params: { workshop: { title: "", description: "", topic: "" } }
+      patch "/api/v1/workshops/#{workshop.id}", params: { workshop: { title: "", description: "", topic: "" } }, headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "returns 401 for unauthenticated requests" do
+      workshop = create(:workshop)
+
+      patch "/api/v1/workshops/#{workshop.id}", params: { workshop: { title: "x", description: "x", topic: "x", active: true } }
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 end

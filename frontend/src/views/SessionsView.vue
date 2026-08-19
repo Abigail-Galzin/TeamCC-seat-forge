@@ -6,6 +6,7 @@ import { getSessionById } from '../services/sessions'
 import { getWorkshopById } from '../services/workshops'
 import { reserveSeatFromApi, confirmRegistrationFromApi } from '../services/registrations'
 import { getErrorMessage } from '../services/api'
+import { useAuthStore } from '../stores/auth'
 import ConfirmationDialog from '../components/ConfirmationDialog.vue'
 import type { Session } from '../types/session'
 import type { Workshop } from '../types/workshop'
@@ -15,16 +16,18 @@ import type { Attendee } from '../types/attendee'
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const auth = useAuthStore()
 const workshopId = Number(route.params.workshopId)
 const workshop = ref<Workshop | undefined>()
 const sessionId = Number(route.params.sessionId)
 const session = ref<Session | undefined>()
 const loading = ref(true)
 const loadError = ref<string | null>(null)
-const attendeeName = ref('')
-const attendeeEmail = ref('')
 const submitting = ref(false)
 const confirming = ref(false)
+
+const canReserve = computed(() => !auth.isAdmin && auth.user?.attendeeId != null)
+const canConfirm = computed(() => auth.isAdmin)
 
 // Modal state
 const showConfirmationModal = ref(false)
@@ -43,29 +46,28 @@ onMounted(async () => {
 })
 
 async function reserveSeat() {
-  if (!attendeeName.value || !attendeeEmail.value) {
-    toast.add({ severity: 'warn', summary: 'Missing details', detail: 'Please enter your name and email.', life: 3000 })
-    return
-  }
-
   submitting.value = true
   try {
-    const registration = await reserveSeatFromApi(workshopId, {
-      attendeeName: attendeeName.value,
-      attendeeEmail: attendeeEmail.value,
-      sessionId: sessionId,
-    })
+    const registration = await reserveSeatFromApi(workshopId, sessionId)
 
-    if (registration.status === 'held' && registration.attendee) {
+    if (registration.status === 'held' && canConfirm.value) {
       registrationData.value = registration
-      attendeeData.value = registration.attendee
+      attendeeData.value = registration.attendee ?? null
       showConfirmationModal.value = true
+    } else if (registration.status === 'held') {
+      toast.add({
+        severity: 'success',
+        summary: 'Seat reserved',
+        detail: 'Your seat is held while you confirm. An admin will confirm your registration.',
+        life: 4000,
+      })
+      router.push({ name: 'workshop-sessions' })
     } else {
       toast.add({
         severity: 'info',
-        summary: 'Reservation confirmed',
+        summary: 'Waitlisted',
         detail: `Reservation created with status: ${registration.status}`,
-        life: 3000,
+        life: 4000,
       })
       router.push({ name: 'workshop-sessions' })
     }
@@ -114,7 +116,7 @@ function handleCancel() {
   toast.add({
     severity: 'info',
     summary: 'Reservation pending',
-    detail: 'You can confirm your seat later from your profile',
+    detail: 'The reservation is kept as held on the session.',
     life: 3000,
   })
   registrationData.value = null
@@ -126,7 +128,7 @@ function handleExpired() {
   toast.add({
     severity: 'warn',
     summary: 'Hold Expired',
-    detail: 'Your seat hold has expired. Please try reserving again.',
+    detail: 'This registration hold has expired. Please try reserving again.',
     life: 5000,
   })
   registrationData.value = null
@@ -158,23 +160,23 @@ function handleExpired() {
         </div>
       </div>
 
-      <form class="card" @submit.prevent="reserveSeat">
-        <h2>Reserve a seat</h2>
-        <label>
-          <span>Name</span>
-          <InputText v-model="attendeeName" required />
-        </label>
-        <label>
-          <span>Email</span>
-          <InputText v-model="attendeeEmail" type="email" required />
-        </label>
+      <Message v-if="auth.isAdmin" severity="info" class="card">
+        Admins manage sessions from the admin area and do not reserve seats themselves.
+      </Message>
 
+      <form v-if="canReserve" class="card" @submit.prevent="reserveSeat">
+        <h2>Reserve a seat</h2>
+        <p class="hint">
+          You are signing in as <strong>{{ auth.user?.email }}</strong>. Submitting this form reserves
+          a seat for your account.
+        </p>
         <Button type="submit" :label="submitting ? 'Reserving...' : 'Reserve seat'" severity="primary" :disabled="submitting" class="form-submit" />
       </form>
     </div>
 
-    <!-- Confirmation Dialog Component -->
+    <!-- Confirmation Dialog Component (admin-only confirm) -->
     <ConfirmationDialog
+      v-if="canConfirm"
       v-model:visible="showConfirmationModal"
       :registration="registrationData"
       :attendee="attendeeData"
@@ -191,6 +193,7 @@ function handleExpired() {
 .actions-row { display: flex; justify-content: flex-end; margin-bottom: 1rem; }
 .card { display: grid; gap: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; }
 label { display: grid; gap: 0.4rem; }
+.hint { margin: 0; color: #475569; }
 .form-submit { justify-self: end; }
 .session-data-card { padding: 2%; }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }

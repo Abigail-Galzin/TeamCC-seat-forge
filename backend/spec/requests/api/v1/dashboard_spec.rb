@@ -1,6 +1,8 @@
-require 'rails_helper'
+﻿require 'rails_helper'
 
 RSpec.describe "Api::V1::Dashboard", type: :request do
+  let(:admin) { create(:user, :admin) }
+
   describe "GET /api/v1/dashboard" do
     it "lists only active workshops, ordered by title" do
       create(:workshop, title: "Zeta Workshop", active: true)
@@ -50,7 +52,7 @@ RSpec.describe "Api::V1::Dashboard", type: :request do
       create(:registration, session: open_session, status: "waitlisted")
       create(:registration, session: open_session, status: "expired", hold_expires_at: nil)
 
-      get "/api/v1/workshops/#{workshop.id}/dashboard"
+      get "/api/v1/workshops/#{workshop.id}/dashboard", headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
@@ -75,16 +77,33 @@ RSpec.describe "Api::V1::Dashboard", type: :request do
       create(:session, workshop: other_workshop, capacity: 5,
         starts_at: 1.day.from_now, ends_at: 1.day.from_now + 1.hour)
 
-      get "/api/v1/workshops/#{workshop.id}/dashboard"
+      get "/api/v1/workshops/#{workshop.id}/dashboard", headers: bearer_header_for(admin)
 
       body = JSON.parse(response.body)
       expect(body["data"]["upcoming_sessions"]).to eq(0)
     end
 
     it "returns a not_found error for an unknown workshop" do
-      get "/api/v1/workshops/999999/dashboard"
+      get "/api/v1/workshops/999999/dashboard", headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 401 for unauthenticated requests" do
+      workshop = create(:workshop)
+
+      get "/api/v1/workshops/#{workshop.id}/dashboard"
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns 403 for a non-admin attendee" do
+      attendee = create(:user)
+      workshop = create(:workshop)
+
+      get "/api/v1/workshops/#{workshop.id}/dashboard", headers: bearer_header_for(attendee)
+
+      expect(response).to have_http_status(:forbidden)
     end
   end
 end

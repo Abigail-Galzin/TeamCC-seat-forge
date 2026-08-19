@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from './stores/auth'
 
 const router = useRouter()
+const toast = useToast()
+const auth = useAuthStore()
 const isDarkMode = ref(false)
 
 const toggleDarkMode = () => {
@@ -10,33 +14,49 @@ const toggleDarkMode = () => {
   document.documentElement.classList.toggle('my-app-dark')
 }
 
-const items = ref([
-  {
-    label: 'Dashboard',
-    icon: 'pi pi-home',
-    command: () => router.push({ name: 'dashboard' })
-  },
-  {
-    label: 'Workshops',
-    icon: 'pi pi-calendar',
-    command: () => router.push({ name: 'attendee-catalog' })
-  },
-  {
-    label: 'Sessions',
-    icon: 'pi pi-list',
-    command: () => router.push({ name: 'sessions-browse' })
-  },
-  {
-    label: 'Admin Workshops',
-    icon: 'pi pi-briefcase',
-    command: () => router.push({ name: 'admin-workshops' })
-  },
-  {
-    label: 'My registrations',
-    icon: 'pi pi-user',
-    command: () => router.push({ name: 'attendee-history' })
+const items = computed(() => {
+  const nav = [
+    {
+      label: 'Dashboard',
+      icon: 'pi pi-home',
+      command: () => router.push({ name: 'dashboard' })
+    },
+    {
+      label: 'Workshops',
+      icon: 'pi pi-calendar',
+      command: () => router.push({ name: 'attendee-catalog' })
+    },
+    {
+      label: 'Sessions',
+      icon: 'pi pi-list',
+      command: () => router.push({ name: 'sessions-browse' })
+    }
+  ]
+
+  if (auth.isAdmin) {
+    nav.push({
+      label: 'Admin Workshops',
+      icon: 'pi pi-briefcase',
+      command: () => router.push({ name: 'admin-workshops' })
+    })
   }
-])
+
+  if (auth.user?.role === 'attendee') {
+    nav.push({
+      label: 'My registrations',
+      icon: 'pi pi-user',
+      command: () => router.push({ name: 'attendee-history' })
+    })
+  }
+
+  return nav
+})
+
+async function handleLogout() {
+  await auth.logout()
+  toast.add({ severity: 'success', summary: 'Signed out', detail: 'You have been signed out.', life: 3000 })
+  router.push({ name: 'dashboard' })
+}
 </script>
 
 <template>
@@ -54,6 +74,37 @@ const items = ref([
         </template>
         <template #end>
           <div class="nav-end">
+            <template v-if="auth.isAuthenticated">
+              <span class="user-chip">
+                <i class="pi pi-user"></i>
+                {{ auth.user?.name ?? auth.user?.email }}
+                <Tag v-if="auth.isAdmin" value="Admin" severity="contrast" rounded />
+              </span>
+              <Button
+                label="Sign out"
+                icon="pi pi-sign-out"
+                severity="secondary"
+                variant="text"
+                size="small"
+                @click="handleLogout"
+              />
+            </template>
+            <template v-else>
+              <Button
+                label="Sign in"
+                icon="pi pi-sign-in"
+                severity="secondary"
+                variant="outlined"
+                size="small"
+                @click="router.push({ name: 'login' })"
+              />
+              <Button
+                label="Register"
+                severity="primary"
+                size="small"
+                @click="router.push({ name: 'register' })"
+              />
+            </template>
             <Button
               :icon="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"
               :label="isDarkMode ? 'Light Mode' : 'Dark Mode'"
@@ -144,6 +195,19 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.my-app-dark .user-chip {
+  color: #e2e8f0;
 }
 
 .app-content {

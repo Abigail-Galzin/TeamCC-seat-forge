@@ -43,3 +43,7 @@ en:
     cancel_error: "Could not cancel the %{model}"
     cancellation_reason_required: "A cancellation reason is required"
     invalid_characters: "contains invalid characters"
+    unauthorized: "You need to sign in to continue"
+    forbidden: "You are not authorized to perform this action"
+    invalid_credentials: "Invalid email or password"
+    already_registered: "There is already an account for this email"

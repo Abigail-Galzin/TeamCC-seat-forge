@@ -1,5 +1,6 @@
-class Api::V1::DashboardController < ApplicationController
+class Api::V1::DashboardController < Api::V1::BaseController
   before_action :set_workshop, only: [ :show ]
+  before_action :authenticate_admin!, only: [ :show ]
 
   # GET /api/v1/dashboard
   def index

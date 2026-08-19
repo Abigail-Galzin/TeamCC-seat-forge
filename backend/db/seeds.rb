@@ -28,9 +28,11 @@ ActiveRecord::Base.transaction do
   Registration.delete_all
   Session.delete_all
   Workshop.delete_all
+  AuthToken.delete_all
+  User.delete_all
   Attendee.delete_all
 
-  %w[registrations sessions workshops attendees].each do |table|
+  %w[registrations sessions workshops attendees auth_tokens users].each do |table|
     ActiveRecord::Base.connection.reset_pk_sequence!(table)
   end
 
@@ -47,6 +49,30 @@ ActiveRecord::Base.transaction do
     ivana: Attendee.create!(name: "Ivana Ibanez", email: "ivana.ibanez@example.com"),
     javier: Attendee.create!(name: "Javier Jimenez", email: "javier.jimenez@example.com"),
   }
+
+  puts "Creating users..."
+  admin_email = ENV.fetch("ADMIN_EMAIL", "admin@example.com")
+  admin_password = ENV.fetch("ADMIN_PASSWORD", "password123")
+  demo_password = ENV.fetch("DEMO_PASSWORD", "password123")
+
+  User.create!(
+    name: "SeatForge Admin",
+    email: admin_email,
+    password: admin_password,
+    password_confirmation: admin_password,
+    role: "admin"
+  )
+
+  attendees.each_value do |attendee|
+    User.create!(
+      name: attendee.name,
+      email: attendee.email,
+      password: demo_password,
+      password_confirmation: demo_password,
+      role: "attendee",
+      attendee: attendee
+    )
+  end
 
   puts "Creating workshops and sessions..."
 
@@ -148,9 +174,12 @@ ActiveRecord::Base.transaction do
   puts "  Workshops: #{Workshop.count}"
   puts "  Sessions: #{Session.count} (#{Session.scheduled.count} scheduled, #{Session.cancelled.count} cancelled)"
   puts "  Attendees: #{Attendee.count}"
+  puts "  Users: #{User.count} (#{User.admin.count} admin, #{User.attendee.count} attendee)"
   puts "  Registrations: #{Registration.count} by status -> #{Registration.group(:status).count}"
   puts "  Demo workshop ##{demo.id} on #{demo_monday}:"
   puts "    Track A (session ##{demo_track_a.id}) - confirmed: #{attendees[:javier].name}"
   puts "    Track B (session ##{demo_track_b.id}, overlaps Track A) - held: #{attendees[:gina].name}"
   puts "    Backup slot (session ##{demo_backup_slot.id}) - cancelled"
+  puts "  Admin login: #{admin_email} / #{admin_password}"
+  puts "  Attendee login (all seeded attendees): <attendee email> / #{demo_password}"
 end

@@ -18,6 +18,38 @@ export const apiClient = axios.create({
   },
 })
 
+// Storage key used by the auth store and the request interceptor below. The
+// interceptor reads it directly (not via the Pinia store) to avoid a circular
+// import between api.ts and the store.
+export const AUTH_TOKEN_STORAGE_KEY = 'seatforge_token'
+
+// Attaches the bearer token to every request when a user is signed in.
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Hook called whenever the backend answers 401. The app shell registers a
+// handler that clears the auth session and redirects to /login.
+let unauthorizedHandler: (() => void) | null = null
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler
+}
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      unauthorizedHandler?.()
+    }
+    return Promise.reject(error)
+  },
+)
+
 export interface BackendHealthResult {
   ok: boolean
   statusText: string

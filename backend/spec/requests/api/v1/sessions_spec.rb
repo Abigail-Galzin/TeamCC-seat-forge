@@ -118,27 +118,50 @@ RSpec.describe "Api::V1::Sessions", type: :request do
 
   describe "POST /create" do
     it "creates a session under the workshop with the given status" do
+      admin = create(:user, :admin)
       workshop = create(:workshop, active: true)
 
       post "/api/v1/workshops/#{workshop.id}/sessions", params: {
         session: { starts_at: 2.days.from_now.iso8601, ends_at: 2.days.from_now.advance(hours: 2).iso8601, capacity: 5, status: "cancelled" }
-      }
+      }, headers: bearer_header_for(admin)
 
       json = response.parsed_body
       expect(response).to have_http_status(:created)
       expect(json["data"]["status"]).to eq("cancelled")
     end
+
+    it "returns 401 for unauthenticated requests" do
+      workshop = create(:workshop, active: true)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions", params: {
+        session: { starts_at: 2.days.from_now.iso8601, ends_at: 2.days.from_now.advance(hours: 2).iso8601, capacity: 5 }
+      }
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns 403 for a non-admin attendee" do
+      attendee = create(:user)
+      workshop = create(:workshop, active: true)
+
+      post "/api/v1/workshops/#{workshop.id}/sessions", params: {
+        session: { starts_at: 2.days.from_now.iso8601, ends_at: 2.days.from_now.advance(hours: 2).iso8601, capacity: 5 }
+      }, headers: bearer_header_for(attendee)
+
+      expect(response).to have_http_status(:forbidden)
+    end
   end
 
   describe "POST /api/v1/sessions/:id/cancel" do
     it "cancels the session and its held, confirmed, and waitlisted registrations" do
+      admin = create(:user, :admin)
       session = create(:session, capacity: 5)
       create(:registration, session: session, status: "held")
       create(:registration, session: session, status: "held")
       create(:registration, session: session, status: "confirmed", confirmed_at: 1.hour.ago, hold_expires_at: nil)
       create(:registration, session: session, status: "waitlisted", hold_expires_at: nil)
 
-      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "Instructor unavailable" }
+      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "Instructor unavailable" }, headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
@@ -151,28 +174,31 @@ RSpec.describe "Api::V1::Sessions", type: :request do
     end
 
     it "rejects a blank cancellation reason" do
+      admin = create(:user, :admin)
       session = create(:session)
 
-      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "  " }
+      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "  " }, headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(session.reload.status).to eq("scheduled")
     end
 
     it "rejects a missing cancellation reason" do
+      admin = create(:user, :admin)
       session = create(:session)
 
-      post "/api/v1/sessions/#{session.id}/cancel"
+      post "/api/v1/sessions/#{session.id}/cancel", headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
     it "is idempotent when the session is already cancelled" do
+      admin = create(:user, :admin)
       session = create(:session, capacity: 5)
       create(:registration, session: session, status: "held")
 
-      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "First reason" }
-      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "Second reason" }
+      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "First reason" }, headers: bearer_header_for(admin)
+      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "Second reason" }, headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
@@ -181,20 +207,30 @@ RSpec.describe "Api::V1::Sessions", type: :request do
     end
 
     it "returns a not_found error for an unknown session" do
-      post "/api/v1/sessions/999999/cancel", params: { cancellation_reason: "Instructor unavailable" }
+      admin = create(:user, :admin)
+
+      post "/api/v1/sessions/999999/cancel", params: { cancellation_reason: "Instructor unavailable" }, headers: bearer_header_for(admin)
 
       expect(response).to have_http_status(:not_found)
     end
 
+    it "returns 401 for unauthenticated requests" do
+      session = create(:session)
+
+      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "Reason" }
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
     it "rejects new registrations against the cancelled session with a conflict response" do
+      admin = create(:user, :admin)
       workshop = create(:workshop)
       session = create(:session, workshop: workshop, capacity: 5)
-      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "Instructor unavailable" }
+      post "/api/v1/sessions/#{session.id}/cancel", params: { cancellation_reason: "Instructor unavailable" }, headers: bearer_header_for(admin)
 
       attendee = create(:attendee)
-      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations", params: {
-        attendee: { name: attendee.name, email: attendee.email }
-      }
+      account = create(:user, email: attendee.email, attendee: attendee)
+      post "/api/v1/workshops/#{workshop.id}/sessions/#{session.id}/registrations", headers: bearer_header_for(account)
 
       expect(response).to have_http_status(:unprocessable_entity)
       body = JSON.parse(response.body)

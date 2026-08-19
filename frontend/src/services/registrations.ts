@@ -1,6 +1,6 @@
-import { getAttendeeByEmailFromApi, getAttendeeRegistrationsFromApi, ensureAttendeeExistsInApi } from './attendees'
+import { getAttendeeByEmailFromApi, getAttendeeRegistrationsFromApi } from './attendees'
 import { apiClient, DEFAULT_PAGE_SIZE } from './api'
-import type { Registration, RegistrationPayload, RegistrationApiRecord } from '../types/registration'
+import type { Registration, RegistrationApiRecord } from '../types/registration'
 import type { Attendee, AttendeeRegistrationsResult } from '../types/attendee'
 
 /**
@@ -35,20 +35,16 @@ function toRegistration(record: RegistrationApiRecord): Registration {
 }
 
 /**
- * Reserves a seat against the real Rails backend
+ * Reserves a seat against the real Rails backend for the signed-in attendee
  * (POST /api/v1/workshops/:workshop_id/sessions/:session_id/registrations).
- * The registrations endpoint only looks up the attendee by email — it never creates
- * one — so this first ensures the attendee exists (POST /api/v1/attendees) before
- * registering. The backend is the source of truth for capacity, held-vs-waitlisted,
- * and conflict validation (duplicate/overlapping registration) — callers should
- * surface backend errors via getErrorMessage rather than a generic message.
+ * The backend resolves the attendee from the bearer token's user account, so
+ * no name/email needs to be sent. It is the source of truth for capacity,
+ * held-vs-waitlisted, and conflict validation — callers should surface backend
+ * errors via getErrorMessage rather than a generic message.
  */
-export async function reserveSeatFromApi(workshopId: number, payload: RegistrationPayload): Promise<Registration & { attendee?: Attendee }> {
-  await ensureAttendeeExistsInApi(payload.attendeeName, payload.attendeeEmail)
-
+export async function reserveSeatFromApi(workshopId: number, sessionId: number): Promise<Registration & { attendee?: Attendee }> {
   const response = await apiClient.post<{ data: RegistrationApiRecord }>(
-    `/workshops/${workshopId}/sessions/${payload.sessionId}/registrations`,
-    { attendee: { name: payload.attendeeName, email: payload.attendeeEmail } },
+    `/workshops/${workshopId}/sessions/${sessionId}/registrations`,
   )
 
   const registration = toRegistration(response.data.data)

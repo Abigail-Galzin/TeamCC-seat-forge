@@ -1,5 +1,6 @@
-class Api::V1::WorkshopsController < ApplicationController
+class Api::V1::WorkshopsController < Api::V1::BaseController
   before_action :set_workshop, only: [ :show, :update ]
+  before_action :authenticate_admin!, only: [ :create, :update ]
 
   def index
     workshops = Workshop.includes(:sessions)

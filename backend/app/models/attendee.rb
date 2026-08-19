@@ -1,5 +1,6 @@
 class Attendee < ApplicationRecord
   has_many :registrations, dependent: :destroy
+  has_one :user
 
 
   validates :name, presence: true,

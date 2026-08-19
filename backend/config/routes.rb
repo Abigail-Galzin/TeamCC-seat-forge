@@ -9,6 +9,11 @@ Rails.application.routes.draw do
   # root "posts#index"
   namespace :api do
     namespace :v1 do
+      post "auth/register", to: "auth#register"
+      post "auth/login", to: "auth#login"
+      delete "auth/logout", to: "auth#logout"
+      get "auth/me", to: "auth#me"
+
       get "dashboard", to: "dashboard#index"
 
       resources :workshops, only: [ :index, :show, :create, :update ] do

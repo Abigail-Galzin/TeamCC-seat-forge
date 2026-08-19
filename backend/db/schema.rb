@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_31_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_18_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -20,6 +20,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_31_150000) do
     t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["email"], name: "index_attendees_on_email", unique: true
+  end
+
+  create_table "auth_tokens", force: :cascade do |t|
+    t.string "token_digest", null: false
+    t.bigint "user_id", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token_digest"], name: "index_auth_tokens_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_auth_tokens_on_user_id"
   end
 
   create_table "registrations", force: :cascade do |t|
@@ -52,6 +63,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_31_150000) do
     t.check_constraint "status::text = ANY (ARRAY['scheduled'::character varying::text, 'cancelled'::character varying::text, 'completed'::character varying::text])", name: "sessions_status_check"
   end
 
+  create_table "users", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "email", null: false
+    t.string "password_digest", null: false
+    t.string "role", default: "attendee", null: false
+    t.bigint "attendee_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attendee_id"], name: "index_users_on_attendee_id"
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying::text, 'attendee'::character varying::text])", name: "users_role_check"
+  end
+
   create_table "workshops", force: :cascade do |t|
     t.string "title", null: false
     t.string "description"
@@ -61,7 +85,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_31_150000) do
     t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
   end
 
+  add_foreign_key "auth_tokens", "users"
   add_foreign_key "registrations", "attendees"
   add_foreign_key "registrations", "sessions"
   add_foreign_key "sessions", "workshops"
+  add_foreign_key "users", "attendees"
 end

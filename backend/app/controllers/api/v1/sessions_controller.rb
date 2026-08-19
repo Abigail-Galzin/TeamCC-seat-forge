@@ -1,6 +1,7 @@
-class Api::V1::SessionsController < ApplicationController
+class Api::V1::SessionsController < Api::V1::BaseController
   before_action :set_workshop, only: [:create, :index]
   before_action :set_session, only: [:show, :availability, :cancel]
+  before_action :authenticate_admin!, only: [:create, :cancel]
 
   # GET /api/v1/sessions
   def index
